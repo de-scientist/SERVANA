@@ -58,7 +58,7 @@ describe('Auth flow (integration, real Postgres)', () => {
     users = moduleRef.get(UsersService);
     prisma = moduleRef.get(PrismaService);
 
-    await this.wipe();
+    await wipe();
   });
 
   afterAll(async () => {
