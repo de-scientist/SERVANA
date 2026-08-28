@@ -94,7 +94,8 @@ describe('Auth flow (integration, real Postgres)', () => {
 
     const refreshed = await auth.refresh(login.refreshToken);
     expect(refreshed.accessToken).toBeDefined();
-    expect(refreshed.accessToken).not.toBe(login.accessToken);
+    // Rotation must issue a brand-new refresh token (jti differs).
+    expect(refreshed.refreshToken).not.toBe(login.refreshToken);
 
     // The rotated-away token must be rejected.
     await expect(auth.refresh(login.refreshToken)).rejects.toThrow();

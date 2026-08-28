@@ -1,69 +1,39 @@
-node.exe : FAIL test/auth.integration.spec.ts (49.014 s)
+node.exe : FAIL test/auth.integration.spec.ts (69.227 s)
 At line:1 char:1
 + & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
 + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (FAIL test/auth....c.ts (49.014 s):String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (FAIL test/auth....c.ts (69.227 s):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
   Auth flow (integration, real Postgres)
-     registers, verifies email, logs in, rotates refresh, and revokes on logout (37 ms)
-     rejects login with the wrong password
-     completes the forgot-password / reset-password flow
+     registers, verifies email, logs in, rotates refresh, and revokes on logout (3002 ms)
+     rejects login with the wrong password (1181 ms)
+     completes the forgot-password / reset-password flow (1872 ms)
 
    Auth flow (integration, real Postgres)  registers, verifies email, logs in, rotates refresh, and revokes on 
 logout
 
-    thrown: "Exceeded timeout of 5000 ms for a hook.
-    Add a timeout value to this test to increase the timeout, if this is a long-running test. See 
-https://jestjs.io/docs/api#testname-fn-timeout."
+    expect(received).not.toBe(expected) // Object.is equality
 
-    [0m [90m 30 |[39m   [36mconst[39m sent[33m:[39m [33mSentMessage[39m[] [33m=[39m [][33m;[39m
-     [90m 31 |[39m
-    [31m[1m>[22m[39m[90m 32 |[39m   beforeAll([36masync[39m () [33m=>[39m {
-     [90m    |[39m   [31m[1m^[22m[39m
-     [90m 33 |[39m     [36mconst[39m capturing [33m=[39m {
-     [90m 34 |[39m       send[33m:[39m [36masync[39m (m[33m:[39m [33mSentMessage[39m) [33m=>[39m {
-     [90m 35 |[39m         sent[33m.[39mpush(m)[33m;[39m[0m
+    Expected: not "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MjJkNjdjOC02MTZlLTRhN2ItOWJhZC0yYmU4YTYwOTIyYWMiLCJ
+lbWFpbCI6Iml0XzE3ODc5MzQ0MDY5NDhfMHE1MnJ4ZTYyZGJkQGV4YW1wbGUuY29tIiwicm9sZXMiOlsiQ1VTVE9NRVIiXSwiaWF0IjoxNzg3OTM0NDA5LC
+JleHAiOjE3ODc5MzUzMDl9.ic5oj0aqoTXVyC93FJmkG5GRXbUifZltSL3iqSxrjqs"
 
-      at test/auth.integration.spec.ts:32:3
-      at Object.<anonymous> (test/auth.integration.spec.ts:26:1)
+    [0m [90m  95 |[39m     [36mconst[39m refreshed [33m=[39m [36mawait[39m 
+auth[33m.[39mrefresh(login[33m.[39mrefreshToken)[33m;[39m
+     [90m  96 |[39m     expect(refreshed[33m.[39maccessToken)[33m.[39mtoBeDefined()[33m;[39m
+    [31m[1m>[22m[39m[90m  97 |[39m     
+expect(refreshed[33m.[39maccessToken)[33m.[39mnot[33m.[39mtoBe(login[33m.[39maccessToken)[33m;[39m
+     [90m     |[39m                                       [31m[1m^[22m[39m
+     [90m  98 |[39m
+     [90m  99 |[39m     [90m// The rotated-away token must be rejected.[39m
+     [90m 100 |[39m     [36mawait[39m 
+expect(auth[33m.[39mrefresh(login[33m.[39mrefreshToken))[33m.[39mrejects[33m.[39mtoThrow()[33m;[39m[0m
 
-   Auth flow (integration, real Postgres)  rejects login with the wrong password
-
-    thrown: "Exceeded timeout of 5000 ms for a hook.
-    Add a timeout value to this test to increase the timeout, if this is a long-running test. See 
-https://jestjs.io/docs/api#testname-fn-timeout."
-
-    [0m [90m 30 |[39m   [36mconst[39m sent[33m:[39m [33mSentMessage[39m[] [33m=[39m [][33m;[39m
-     [90m 31 |[39m
-    [31m[1m>[22m[39m[90m 32 |[39m   beforeAll([36masync[39m () [33m=>[39m {
-     [90m    |[39m   [31m[1m^[22m[39m
-     [90m 33 |[39m     [36mconst[39m capturing [33m=[39m {
-     [90m 34 |[39m       send[33m:[39m [36masync[39m (m[33m:[39m [33mSentMessage[39m) [33m=>[39m {
-     [90m 35 |[39m         sent[33m.[39mpush(m)[33m;[39m[0m
-
-      at test/auth.integration.spec.ts:32:3
-      at Object.<anonymous> (test/auth.integration.spec.ts:26:1)
-
-   Auth flow (integration, real Postgres)  completes the forgot-password / reset-password flow
-
-    thrown: "Exceeded timeout of 5000 ms for a hook.
-    Add a timeout value to this test to increase the timeout, if this is a long-running test. See 
-https://jestjs.io/docs/api#testname-fn-timeout."
-
-    [0m [90m 30 |[39m   [36mconst[39m sent[33m:[39m [33mSentMessage[39m[] [33m=[39m [][33m;[39m
-     [90m 31 |[39m
-    [31m[1m>[22m[39m[90m 32 |[39m   beforeAll([36masync[39m () [33m=>[39m {
-     [90m    |[39m   [31m[1m^[22m[39m
-     [90m 33 |[39m     [36mconst[39m capturing [33m=[39m {
-     [90m 34 |[39m       send[33m:[39m [36masync[39m (m[33m:[39m [33mSentMessage[39m) [33m=>[39m {
-     [90m 35 |[39m         sent[33m.[39mpush(m)[33m;[39m[0m
-
-      at test/auth.integration.spec.ts:32:3
-      at Object.<anonymous> (test/auth.integration.spec.ts:26:1)
+      at Object.<anonymous> (test/auth.integration.spec.ts:97:39)
 
 Test Suites: 1 failed, 1 total
-Tests:       3 failed, 3 total
+Tests:       1 failed, 2 passed, 3 total
 Snapshots:   0 total
-Time:        51.755 s
+Time:        70.755 s
 Ran all test suites.
