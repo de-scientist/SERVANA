@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
+import { appendFileSync } from 'fs';
 
 export const QUEUE_NAME = 'servana-default';
 
@@ -15,6 +16,7 @@ export class QueueService implements OnModuleDestroy {
     if (!url) return;
 
     try {
+      appendFileSync('E:/SERVANA/apps/api/boot_trace.log', 'queue init start\n');
       const connection = new Redis(url, { maxRetriesPerRequest: null });
       this.queue = new Queue(QUEUE_NAME, { connection });
 
@@ -27,8 +29,13 @@ export class QueueService implements OnModuleDestroy {
       );
 
       this.worker.on('error', (err) => this.logger.warn(`Queue worker error: ${err.message}`));
+      appendFileSync('E:/SERVANA/apps/api/boot_trace.log', 'queue init done\n');
       this.logger.log('Queue + worker initialized');
     } catch (err) {
+      appendFileSync(
+        'E:/SERVANA/apps/api/boot_trace.log',
+        `queue init error: ${(err as Error).message}\n`,
+      );
       this.logger.warn(`Queue init failed (redis?): ${(err as Error).message}`);
     }
   }
