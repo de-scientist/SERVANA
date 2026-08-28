@@ -16,7 +16,7 @@ import { AuditModule } from '../audit/audit.module';
     AuditModule,
     NotificationModule,
     JwtModule.register({
-      isGlobal: true,
+      global: true,
       secret: process.env.JWT_ACCESS_SECRET ?? 'change_me_access',
       signOptions: { expiresIn: Number(process.env.JWT_ACCESS_TTL ?? 900) },
     }),

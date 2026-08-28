@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileInput } from './dto/profile.schema';
 
@@ -84,10 +84,14 @@ export class UsersService {
 
   async updateProfile(userId: string, dto: UpdateProfileInput): Promise<UserProfile> {
     await this.findById(userId);
-    const data: Prisma.UserUpdateInput = { ...dto };
-    // Prisma requires its JsonNull sentinel for explicit nulls on Json columns.
-    if (dto.preferences === null) data.preferences = Prisma.JsonNull;
-    if (dto.address === null) data.address = Prisma.JsonNull;
+    const data: Prisma.UserUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.profileImage !== undefined) data.profileImage = dto.profileImage;
+    if (dto.lat !== undefined) data.lat = dto.lat;
+    if (dto.lng !== undefined) data.lng = dto.lng;
+    data.preferences = dto.preferences === null ? Prisma.JsonNull : ((dto.preferences as Prisma.InputJsonValue) ?? undefined);
+    data.address = dto.address === null ? Prisma.JsonNull : ((dto.address as Prisma.InputJsonValue) ?? undefined);
     await this.prisma.user.update({ where: { id: userId }, data });
     return this.getProfile(userId);
   }
@@ -137,7 +141,7 @@ export class UsersService {
     await this.findById(userId);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { status: status as Prisma.UserStatus },
+      data: { status: status as UserStatus },
     });
   }
 }
