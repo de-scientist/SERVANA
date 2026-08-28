@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { Prisma, PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileInput } from './dto/profile.schema';
 
 export interface UserProfile {
@@ -83,7 +84,11 @@ export class UsersService {
 
   async updateProfile(userId: string, dto: UpdateProfileInput): Promise<UserProfile> {
     await this.findById(userId);
-    await this.prisma.user.update({ where: { id: userId }, data: dto });
+    const data: Prisma.UserUpdateInput = { ...dto };
+    // Prisma requires its JsonNull sentinel for explicit nulls on Json columns.
+    if (dto.preferences === null) data.preferences = Prisma.JsonNull;
+    if (dto.address === null) data.address = Prisma.JsonNull;
+    await this.prisma.user.update({ where: { id: userId }, data });
     return this.getProfile(userId);
   }
 
@@ -130,6 +135,9 @@ export class UsersService {
   /** Admin: set account status. */
   async setStatus(userId: string, status: string): Promise<void> {
     await this.findById(userId);
-    await this.prisma.user.update({ where: { id: userId }, data: { status: status as never } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { status: status as Prisma.UserStatus },
+    });
   }
 }
