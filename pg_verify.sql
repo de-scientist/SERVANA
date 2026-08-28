@@ -1,1 +1,5 @@
-SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name ILIKE '%role%';
+SELECT u."email", r."name"
+FROM "User" u
+JOIN "UserRole" ur ON ur."userId" = u."id"
+JOIN "Role" r ON r."id" = ur."roleId"
+WHERE u."email" = 'admin@servana.app';

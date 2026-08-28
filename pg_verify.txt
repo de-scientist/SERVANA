@@ -1,4 +1,2 @@
- UserRole
- Role
- _PermissionToRole
+ admin@servana.app | SUPER_ADMIN
 
