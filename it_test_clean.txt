@@ -1,104 +1,69 @@
-node.exe : FAIL test/auth.integration.spec.ts (24.069 s)
+node.exe : FAIL test/auth.integration.spec.ts (49.014 s)
 At line:1 char:1
 + & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
 + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (FAIL test/auth....c.ts (24.069 s):String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (FAIL test/auth....c.ts (49.014 s):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
+  Auth flow (integration, real Postgres)
+     registers, verifies email, logs in, rotates refresh, and revokes on logout (37 ms)
+     rejects login with the wrong password
+     completes the forgot-password / reset-password flow
+
    Auth flow (integration, real Postgres)  registers, verifies email, logs in, rotates refresh, and revokes on 
 logout
 
-    PrismaClientKnownRequestError: 
-    Invalid `this.prisma.refreshToken.create()` invocation in
-    E:\SERVANA\apps\api\src\modules\auth\auth.service.ts:255:36
+    thrown: "Exceeded timeout of 5000 ms for a hook.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See 
+https://jestjs.io/docs/api#testname-fn-timeout."
 
-      252   { sub, email, roles },
-      253   { secret: this.refreshSecret, expiresIn: Number(process.env.JWT_REFRESH_TTL ?? 1209600) },
-      254 );
-     255 await this.prisma.refreshToken.create(
-    Unique constraint failed on the fields: (`tokenHash`)
+    [0m [90m 30 |[39m   [36mconst[39m sent[33m:[39m [33mSentMessage[39m[] [33m=[39m [][33m;[39m
+     [90m 31 |[39m
+    [31m[1m>[22m[39m[90m 32 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m    |[39m   [31m[1m^[22m[39m
+     [90m 33 |[39m     [36mconst[39m capturing [33m=[39m {
+     [90m 34 |[39m       send[33m:[39m [36masync[39m (m[33m:[39m [33mSentMessage[39m) [33m=>[39m {
+     [90m 35 |[39m         sent[33m.[39mpush(m)[33m;[39m[0m
 
-    [0m [90m 253 |[39m       { secret[33m:[39m [36mthis[39m[33m.[39mrefreshSecret[33m,[39m 
-expiresIn[33m:[39m [33mNumber[39m(process[33m.[39menv[33m.[39m[33mJWT_REFRESH_TTL[39m [33m?[39m[33m?[39m 
-[35m1209600[39m) }[33m,[39m
-     [90m 254 |[39m     )[33m;[39m
-    [31m[1m>[22m[39m[90m 255 |[39m     [36mawait[39m 
-[36mthis[39m[33m.[39mprisma[33m.[39mrefreshToken[33m.[39mcreate({
-     [90m     |[39m     [31m[1m^[22m[39m
-     [90m 256 |[39m       data[33m:[39m {
-     [90m 257 |[39m         userId[33m:[39m sub[33m,[39m
-     [90m 258 |[39m         tokenHash[33m:[39m [36mthis[39m[33m.[39mhash(refreshToken)[33m,[39m[0m
+      at test/auth.integration.spec.ts:32:3
+      at Object.<anonymous> (test/auth.integration.spec.ts:26:1)
 
-      at $n.handleRequestError (node_modules/@prisma/client/runtime/library.js:121:7315)
-      at $n.handleAndLogRequestError (node_modules/@prisma/client/runtime/library.js:121:6623)
-      at $n.request (node_modules/@prisma/client/runtime/library.js:121:6307)
-      at l (node_modules/@prisma/client/runtime/library.js:130:9633)
-      at AuthService.issueTokens (src/modules/auth/auth.service.ts:255:5)
-      at Object.<anonymous> (test/auth.integration.spec.ts:88:23)
+   Auth flow (integration, real Postgres)  rejects login with the wrong password
+
+    thrown: "Exceeded timeout of 5000 ms for a hook.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See 
+https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 30 |[39m   [36mconst[39m sent[33m:[39m [33mSentMessage[39m[] [33m=[39m [][33m;[39m
+     [90m 31 |[39m
+    [31m[1m>[22m[39m[90m 32 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m    |[39m   [31m[1m^[22m[39m
+     [90m 33 |[39m     [36mconst[39m capturing [33m=[39m {
+     [90m 34 |[39m       send[33m:[39m [36masync[39m (m[33m:[39m [33mSentMessage[39m) [33m=>[39m {
+     [90m 35 |[39m         sent[33m.[39mpush(m)[33m;[39m[0m
+
+      at test/auth.integration.spec.ts:32:3
+      at Object.<anonymous> (test/auth.integration.spec.ts:26:1)
 
    Auth flow (integration, real Postgres)  completes the forgot-password / reset-password flow
 
-    PrismaClientKnownRequestError: 
-    Invalid `this.prisma.refreshToken.create()` invocation in
-    E:\SERVANA\apps\api\src\modules\auth\auth.service.ts:255:36
+    thrown: "Exceeded timeout of 5000 ms for a hook.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See 
+https://jestjs.io/docs/api#testname-fn-timeout."
 
-      252   { sub, email, roles },
-      253   { secret: this.refreshSecret, expiresIn: Number(process.env.JWT_REFRESH_TTL ?? 1209600) },
-      254 );
-     255 await this.prisma.refreshToken.create(
-    Unique constraint failed on the fields: (`tokenHash`)
+    [0m [90m 30 |[39m   [36mconst[39m sent[33m:[39m [33mSentMessage[39m[] [33m=[39m [][33m;[39m
+     [90m 31 |[39m
+    [31m[1m>[22m[39m[90m 32 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m    |[39m   [31m[1m^[22m[39m
+     [90m 33 |[39m     [36mconst[39m capturing [33m=[39m {
+     [90m 34 |[39m       send[33m:[39m [36masync[39m (m[33m:[39m [33mSentMessage[39m) [33m=>[39m {
+     [90m 35 |[39m         sent[33m.[39mpush(m)[33m;[39m[0m
 
-    [0m [90m 253 |[39m       { secret[33m:[39m [36mthis[39m[33m.[39mrefreshSecret[33m,[39m 
-expiresIn[33m:[39m [33mNumber[39m(process[33m.[39menv[33m.[39m[33mJWT_REFRESH_TTL[39m [33m?[39m[33m?[39m 
-[35m1209600[39m) }[33m,[39m
-     [90m 254 |[39m     )[33m;[39m
-    [31m[1m>[22m[39m[90m 255 |[39m     [36mawait[39m 
-[36mthis[39m[33m.[39mprisma[33m.[39mrefreshToken[33m.[39mcreate({
-     [90m     |[39m     [31m[1m^[22m[39m
-     [90m 256 |[39m       data[33m:[39m {
-     [90m 257 |[39m         userId[33m:[39m sub[33m,[39m
-     [90m 258 |[39m         tokenHash[33m:[39m [36mthis[39m[33m.[39mhash(refreshToken)[33m,[39m[0m
-
-      at $n.handleRequestError (node_modules/@prisma/client/runtime/library.js:121:7315)
-      at $n.handleAndLogRequestError (node_modules/@prisma/client/runtime/library.js:121:6623)
-      at $n.request (node_modules/@prisma/client/runtime/library.js:121:6307)
-      at l (node_modules/@prisma/client/runtime/library.js:130:9633)
-      at AuthService.issueTokens (src/modules/auth/auth.service.ts:255:5)
-      at Object.<anonymous> (test/auth.integration.spec.ts:121:19)
-
-
-   Test suite failed to run
-
-    PrismaClientUnknownRequestError: 
-    Invalid `prisma.user.deleteMany()` invocation in
-    E:\SERVANA\apps\api\test\auth.integration.spec.ts:65:23
-
-      62 afterAll(async () => {
-      63   await prisma.refreshToken.deleteMany({});
-      64   await prisma.auditLog.deleteMany({});
-     65   await prisma.user.deleteMany(
-    Error occurred during query execution:
-    ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "23001", message: 
-"update or delete on table \"User\" violates RESTRICT setting of foreign key constraint \"UserRole_userId_fkey\" on 
-table \"UserRole\"", severity: "ERROR", detail: Some("Key (id)=(211b22b2-8b9f-428a-8260-c6219630b7a8) is referenced 
-from table \"UserRole\"."), column: None, hint: None }), transient: false })
-
-    [0m [90m 63 |[39m     [36mawait[39m prisma[33m.[39mrefreshToken[33m.[39mdeleteMany({})[33m;[39m
-     [90m 64 |[39m     [36mawait[39m prisma[33m.[39mauditLog[33m.[39mdeleteMany({})[33m;[39m
-    [31m[1m>[22m[39m[90m 65 |[39m     [36mawait[39m prisma[33m.[39muser[33m.[39mdeleteMany({})[33m;[39m
-     [90m    |[39m     [31m[1m^[22m[39m
-     [90m 66 |[39m     [36mawait[39m prisma[33m.[39m$disconnect()[33m;[39m
-     [90m 67 |[39m   })[33m;[39m
-     [90m 68 |[39m[0m
-
-      at $n.handleRequestError (node_modules/@prisma/client/runtime/library.js:121:7505)
-      at $n.handleAndLogRequestError (node_modules/@prisma/client/runtime/library.js:121:6623)
-      at $n.request (node_modules/@prisma/client/runtime/library.js:121:6307)
-      at l (node_modules/@prisma/client/runtime/library.js:130:9633)
-      at Object.<anonymous> (test/auth.integration.spec.ts:65:5)
+      at test/auth.integration.spec.ts:32:3
+      at Object.<anonymous> (test/auth.integration.spec.ts:26:1)
 
 Test Suites: 1 failed, 1 total
-Tests:       2 failed, 1 passed, 3 total
+Tests:       3 failed, 3 total
 Snapshots:   0 total
-Time:        25.799 s
+Time:        51.755 s
 Ran all test suites.

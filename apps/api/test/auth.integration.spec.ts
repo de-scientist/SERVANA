@@ -59,12 +59,12 @@ describe('Auth flow (integration, real Postgres)', () => {
     prisma = moduleRef.get(PrismaService);
 
     await wipe();
-  });
+  }, 60000);
 
   afterAll(async () => {
     await wipe();
     await prisma.$disconnect();
-  });
+  }, 60000);
 
   async function wipe(): Promise<void> {
     await prisma.refreshToken.deleteMany({});
