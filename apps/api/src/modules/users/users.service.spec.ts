@@ -91,7 +91,7 @@ describe('UsersService', () => {
 
   it('changeEmail rejects an already-used email', async () => {
     const prisma = makePrisma();
-    prisma.user.findUnique.mockImplementation((args: { where: { id?: string; email?: string } }) => {
+    prisma.user.findUnique.mockImplementation(async (args: { where: { id?: string; email?: string } }) => {
       if (args.where.email === 'taken@b.com') return Promise.resolve({ id: 'other' });
       return Promise.resolve({ ...baseUser, passwordHash: await bcrypt.hash('OldPass1', 10) });
     });

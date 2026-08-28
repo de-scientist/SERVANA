@@ -51,7 +51,7 @@ describe('AuthService', () => {
     users.create.mockResolvedValue({ id: 'u1', email: 'a@b.com' });
     const auth = service(prisma, users);
 
-    const res = await auth.register({ name: 'Ada', email: 'a@b.com', password: 'Password1' });
+    const res = await auth.register({ name: 'Ada', email: 'a@b.com', password: 'Password1', role: 'CUSTOMER' });
 
     expect(users.create).toHaveBeenCalledWith('a@b.com', expect.any(String), 'Ada', undefined);
     expect(rbac.assignRole).toHaveBeenCalledWith('u1', 'CUSTOMER');
@@ -84,7 +84,7 @@ describe('AuthService', () => {
     users.create.mockRejectedValue(new ConflictException('Email already registered'));
     const auth = service(prisma, users);
 
-    await expect(auth.register({ name: 'A', email: 'a@b.com', password: 'Password1' })).rejects.toBeInstanceOf(
+    await expect(auth.register({ name: 'A', email: 'a@b.com', password: 'Password1', role: 'CUSTOMER' })).rejects.toBeInstanceOf(
       ConflictException,
     );
   });
