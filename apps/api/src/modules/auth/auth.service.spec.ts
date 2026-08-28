@@ -40,7 +40,7 @@ const audit = { record: jest.fn().mockResolvedValue(undefined) } as any;
 const notifications = { send: jest.fn().mockResolvedValue({ delivered: true }) } as any;
 const jwt = { sign: jest.fn().mockReturnValue('signed-token'), verify: jest.fn() } as any;
 
-function service(users: any, prisma: any) {
+function service(prisma: any, users: any) {
   return new AuthService(users, prisma, jwt, rbac, audit, notifications);
 }
 
