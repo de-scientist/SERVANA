@@ -5,9 +5,12 @@ import { AppModule } from './app.module';
 import { AppLoggerService } from './common/logging/logger.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
+// eslint-disable-next-line no-console
+console.log('[BOOT] main module loaded');
+
 async function bootstrap(): Promise<void> {
   const logger = new AppLoggerService('Bootstrap');
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, { logger });
   app.useLogger(logger);
 
   const port = Number(process.env.API_PORT ?? 3001);
