@@ -1,4 +1,4 @@
-import { Inject, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { STORAGE_PROVIDER, StorageProvider } from './storage.provider';
 import { StubStorageProvider } from './stub-storage.provider';
