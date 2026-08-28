@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { AppProviders } from '@/components/providers/app-providers';
-import './styles/globals.css';
+import '../styles/globals.css';
 
 export const metadata: Metadata = {
   title: 'SERVANA — Beauty & Personal Care Marketplace',
