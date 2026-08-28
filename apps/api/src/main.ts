@@ -1,21 +1,27 @@
 import 'reflect-metadata';
+import { appendFileSync } from 'fs';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { AppLoggerService } from './common/logging/logger.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
-// eslint-disable-next-line no-console
-console.log('[BOOT] main module loaded');
+function trace(msg: string): void {
+  try {
+    appendFileSync('E:/SERVANA/apps/api/boot_trace.log', `${new Date().toISOString()} ${msg}\n`);
+  } catch {
+    /* ignore */
+  }
+}
+
+trace('main module loaded');
 
 async function bootstrap(): Promise<void> {
-  // eslint-disable-next-line no-console
-  console.log('[BOOT] before NestFactory.create');
+  trace('before NestFactory.create');
   const logger = new AppLoggerService('Bootstrap');
   const app = await NestFactory.create(AppModule, { logger });
   app.useLogger(logger);
-  // eslint-disable-next-line no-console
-  console.log('[BOOT] after NestFactory.create');
+  trace('after NestFactory.create');
 
   const port = Number(process.env.API_PORT ?? 3001);
   const origins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
@@ -35,8 +41,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   await app.listen(port);
-  // eslint-disable-next-line no-console
-  console.log('[BOOT] listen resolved');
+  trace('listen resolved');
   logger.log(`API listening on http://localhost:${port}/api/v1`);
   logger.log(`Health: http://localhost:${port}/api/v1/health`);
 
