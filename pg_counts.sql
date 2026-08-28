@@ -1,1 +1,0 @@
-SELECT 'User' AS t, count(*) FROM "User" UNION ALL SELECT 'RefreshToken', count(*) FROM "RefreshToken";

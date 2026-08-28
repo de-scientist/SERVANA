@@ -1,1 +1,0 @@
-pg_ctl: could not send reload signal (PID: 4440): Operation not permitted

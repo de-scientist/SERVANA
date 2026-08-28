@@ -1,3 +1,0 @@
- User         |     3
- RefreshToken |     0
-
