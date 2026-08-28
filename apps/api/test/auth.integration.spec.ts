@@ -57,14 +57,21 @@ describe('Auth flow (integration, real Postgres)', () => {
     auth = moduleRef.get(AuthService);
     users = moduleRef.get(UsersService);
     prisma = moduleRef.get(PrismaService);
+
+    await this.wipe();
   });
 
   afterAll(async () => {
-    await prisma.refreshToken.deleteMany({});
-    await prisma.auditLog.deleteMany({});
-    await prisma.user.deleteMany({});
+    await wipe();
     await prisma.$disconnect();
   });
+
+  async function wipe(): Promise<void> {
+    await prisma.refreshToken.deleteMany({});
+    await prisma.userRole.deleteMany({});
+    await prisma.auditLog.deleteMany({});
+    await prisma.user.deleteMany({});
+  }
 
   it('registers, verifies email, logs in, rotates refresh, and revokes on logout', async () => {
     const email = `it_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;

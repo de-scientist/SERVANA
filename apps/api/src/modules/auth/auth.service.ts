@@ -1,7 +1,7 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { RbacService } from '../rbac/rbac.service';
@@ -249,7 +249,7 @@ export class AuthService {
       { secret: this.accessSecret, expiresIn: Number(process.env.JWT_ACCESS_TTL ?? 900) },
     );
     const refreshToken = this.jwt.sign(
-      { sub, email, roles },
+      { sub, email, roles, jti: randomUUID() },
       { secret: this.refreshSecret, expiresIn: Number(process.env.JWT_REFRESH_TTL ?? 1209600) },
     );
     await this.prisma.refreshToken.create({
