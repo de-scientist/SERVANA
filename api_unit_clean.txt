@@ -2,139 +2,14 @@
 > api@0.1.0 test
 > jest --runInBand
 
-FAIL src/modules/auth/auth.service.spec.ts
-   Test suite failed to run
-
-    [96msrc/modules/auth/auth.service.ts[0m:[93m66[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'user' does not exist on type 'PrismaService'.
-
-    [7m66[0m     await this.prisma.user.update({
-    [7m  [0m [91m                      ~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m107[0m:[93m38[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m107[0m     const record = await this.prisma.refreshToken.findFirst({
-    [7m   [0m [91m                                     ~~~~~~~~~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m113[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m113[0m     await this.prisma.refreshToken.update({ where: { id: record.id }, data: { revoked: true } });
-    [7m   [0m [91m                      ~~~~~~~~~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m119[0m:[93m38[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m119[0m     const record = await this.prisma.refreshToken.findFirst({
-    [7m   [0m [91m                                     ~~~~~~~~~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m123[0m:[93m25[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m123[0m       await this.prisma.refreshToken.update({ where: { id: record.id }, data: { revoked: true } });
-    [7m   [0m [91m                        ~~~~~~~~~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m129[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m129[0m     await this.prisma.refreshToken.updateMany({
-    [7m   [0m [91m                      ~~~~~~~~~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m137[0m:[93m38[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m137[0m     const tokens = await this.prisma.refreshToken.findMany({
-    [7m   [0m [91m                                     ~~~~~~~~~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m150[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m150[0m     await this.prisma.refreshToken.updateMany({
-    [7m   [0m [91m                      ~~~~~~~~~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m161[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'user' does not exist on type 'PrismaService'.
-
-    [7m161[0m     await this.prisma.user.update({
-    [7m   [0m [91m                      ~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m177[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 'user' does not exist on type 'PrismaService'.
-
-    [7m177[0m     const user = await this.prisma.user.findFirst({ where: { passwordResetToken: hashToken(dto.token) } });
-    [7m   [0m [91m                                   ~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m182[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'user' does not exist on type 'PrismaService'.
-
-    [7m182[0m     await this.prisma.user.update({
-    [7m   [0m [91m                      ~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m187[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m187[0m     await this.prisma.refreshToken.updateMany({ where: { userId: user.id }, data: { revoked: true } });
-    [7m   [0m [91m                      ~~~~~~~~~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m192[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 'user' does not exist on type 'PrismaService'.
-
-    [7m192[0m     const user = await this.prisma.user.findFirst({ where: { emailVerifyToken: hashToken(dto.token) } });
-    [7m   [0m [91m                                   ~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m196[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'user' does not exist on type 'PrismaService'.
-
-    [7m196[0m     await this.prisma.user.update({
-    [7m   [0m [91m                      ~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m207[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'user' does not exist on type 'PrismaService'.
-
-    [7m207[0m     await this.prisma.user.update({
-    [7m   [0m [91m                      ~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m223[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m223[0m     await this.prisma.refreshToken.updateMany({ where: { userId }, data: { revoked: true } });
-    [7m   [0m [91m                      ~~~~~~~~~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m231[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'user' does not exist on type 'PrismaService'.
-
-    [7m231[0m     await this.prisma.user.update({
-    [7m   [0m [91m                      ~~~~[0m
-    [96msrc/modules/auth/auth.service.ts[0m:[93m255[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'refreshToken' does not exist on type 'PrismaService'.
-
-    [7m255[0m     await this.prisma.refreshToken.create({
-    [7m   [0m [91m                      ~~~~~~~~~~~~[0m
-
-PASS src/modules/rbac/guards/roles.guard.spec.ts (21.093 s)
-FAIL src/modules/users/users.service.spec.ts
-   Test suite failed to run
-
-    Cannot find module '.prisma/client/default' from '../node_modules/@prisma/client/default.js'
-
-    Require stack:
-      E:/SERVANA/apps/api/node_modules/@prisma/client/default.js
-      modules/users/users.service.spec.ts
-
-    [0m [90m 1 |[39m [36mimport[39m { [33mConflictException[39m[33m,[39m [33mNotFoundException[39m } [36mfrom[39m [32m'@nestjs/common'[39m[33m;[39m
-     [90m 2 |[39m [36mimport[39m [33m*[39m [36mas[39m bcrypt [36mfrom[39m [32m'bcryptjs'[39m[33m;[39m
-    [31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m { [33mPrisma[39m } [36mfrom[39m [32m'@prisma/client'[39m[33m;[39m
-     [90m   |[39m [31m[1m^[22m[39m
-     [90m 4 |[39m [36mimport[39m { [33mUsersService[39m } [36mfrom[39m [32m'./users.service'[39m[33m;[39m
-     [90m 5 |[39m
-     [90m 6 |[39m [36mfunction[39m makePrisma() {[0m
-
-      at Resolver._throwModNotFoundError (../../../node_modules/jest-resolve/build/resolver.js:427:11)
-      at Object.<anonymous> (../node_modules/@prisma/client/default.js:2:6)
-      at Object.<anonymous> (modules/users/users.service.spec.ts:3:1)
-
-FAIL src/modules/rbac/rbac.service.spec.ts
-   Test suite failed to run
-
-    Cannot find module '.prisma/client/default' from '../node_modules/@prisma/client/default.js'
-
-    Require stack:
-      E:/SERVANA/apps/api/node_modules/@prisma/client/default.js
-      modules/prisma/prisma.service.ts
-      modules/rbac/rbac.service.ts
-      modules/rbac/rbac.service.spec.ts
-
-    [0m [90m 1 |[39m [36mimport[39m { [33mInjectable[39m[33m,[39m [33mLogger[39m[33m,[39m [33mOnModuleInit[39m } [36mfrom[39m [32m'@nestjs/common'[39m[33m;[39m
-    [31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { [33mPrismaClient[39m } [36mfrom[39m [32m'@prisma/client'[39m[33m;[39m
-     [90m   |[39m [31m[1m^[22m[39m
-     [90m 3 |[39m
-     [90m 4 |[39m [33m@[39m[33mInjectable[39m()
-     [90m 5 |[39m [36mexport[39m [36mclass[39m [33mPrismaService[39m [36mextends[39m [33mPrismaClient[39m [36mimplements[39m [33mOnModuleInit[39m {[0m
-
-      at Resolver._throwModNotFoundError (../../../node_modules/jest-resolve/build/resolver.js:427:11)
-      at Object.<anonymous> (../node_modules/@prisma/client/default.js:2:6)
-      at Object.<anonymous> (modules/prisma/prisma.service.ts:2:1)
-      at Object.<anonymous> (modules/rbac/rbac.service.ts:2:1)
-      at Object.<anonymous> (modules/rbac/rbac.service.spec.ts:1:1)
-
+PASS src/modules/rbac/guards/roles.guard.spec.ts (27.286 s)
 PASS src/common/money/money.spec.ts
+PASS src/modules/users/users.service.spec.ts (5.086 s)
+PASS src/modules/rbac/rbac.service.spec.ts
+PASS src/modules/auth/auth.service.spec.ts (9.597 s)
 
-Test Suites: 3 failed, 2 passed, 5 total
-Tests:       8 passed, 8 total
+Test Suites: 5 passed, 5 total
+Tests:       29 passed, 29 total
 Snapshots:   0 total
-Time:        98.51 s
+Time:        44.247 s
 Ran all test suites.
-npm error Lifecycle script `test` failed with error:
-npm error code 1
-npm error path E:\SERVANA\apps\api
-npm error workspace api@0.1.0
-npm error location E:\SERVANA\apps\api
-npm error command failed
-npm error command C:\Windows\system32\cmd.exe /d /s /c jest --runInBand
