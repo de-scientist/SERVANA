@@ -19,7 +19,7 @@ import {
   ResetPasswordInput,
   VerifyEmailInput,
 } from './dto/auth.schema';
-import { Authenticated, Auth, CurrentUser } from './guards/current-user.decorator';
+import { Authenticated, CurrentUser } from './guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { Throttle } from '../../common/guards/throttler.guard';
 import {
@@ -63,7 +63,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(200)
   @Throttle(20, 60)
-  async refresh(@Body(new ZodValidationPipe(refreshSchema)) body: { refreshToken: string }, @Req() req: ExpressRequest) {
+  async refresh(@Body(new ZodValidationPipe(refreshSchema)) body: { refreshToken: string }) {
     return { data: await this.auth.refresh(body.refreshToken) };
   }
 

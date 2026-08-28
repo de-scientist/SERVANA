@@ -200,7 +200,7 @@ export class AuthService {
     await this.audit.record({ actorId: user.id, action: 'auth.email.verify', entity: 'user', entityId: user.id, ip });
   }
 
-  async resendVerification(dto: ResendVerificationInput, ip?: string): Promise<void> {
+  async resendVerification(dto: ResendVerificationInput, _ip?: string): Promise<void> {
     const user = await this.users.findByEmail(dto.email);
     if (!user || user.emailVerified) return;
     const token = generateToken();
