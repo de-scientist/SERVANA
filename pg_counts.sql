@@ -1,1 +1,1 @@
-SELECT (SELECT count(*) FROM "User") AS users, (SELECT count(*) FROM "RefreshToken") AS rts, (SELECT count(*) FROM "userRole") AS urs;
+SELECT 'User' AS t, count(*) FROM "User" UNION ALL SELECT 'RefreshToken', count(*) FROM "RefreshToken";
