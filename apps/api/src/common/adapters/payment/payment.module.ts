@@ -1,4 +1,4 @@
-import { Inject, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PAYMENT_PROVIDER, PaymentProvider } from './payment.provider';
 import { StubPaymentProvider } from './stub-payment.provider';
@@ -7,7 +7,7 @@ import { StubPaymentProvider } from './stub-payment.provider';
   providers: [
     {
       provide: PAYMENT_PROVIDER,
-      useFactory: (config: ConfigService): PaymentProvider => {
+      useFactory: (_config: ConfigService): PaymentProvider => {
         // Future: switch on config.get('PAYMENT_DEFAULT_PROVIDER') to return
         // MpesaProvider / CardProvider / BankProvider.
         return new StubPaymentProvider();

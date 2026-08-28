@@ -7,6 +7,7 @@ export class StubNotificationProvider implements NotificationProvider {
 
   async send(msg: NotificationMessage): Promise<NotificationResult> {
     // No-op in foundation; logs to stdout so wiring is observable.
+    void msg.channel;
     return { delivered: true, providerRef: `stub_${Date.now()}` };
   }
 }

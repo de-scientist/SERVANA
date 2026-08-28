@@ -1,4 +1,4 @@
-import { Inject, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AI_PROVIDER, AiProvider } from './ai.provider';
 import { StubAiProvider } from './stub-ai.provider';
@@ -7,7 +7,7 @@ import { StubAiProvider } from './stub-ai.provider';
   providers: [
     {
       provide: AI_PROVIDER,
-      useFactory: (config: ConfigService): AiProvider => new StubAiProvider(),
+      useFactory: (_config: ConfigService): AiProvider => new StubAiProvider(),
       inject: [ConfigService],
     },
   ],
