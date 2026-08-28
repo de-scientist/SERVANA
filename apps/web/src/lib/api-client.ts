@@ -1,3 +1,5 @@
+import { clearSession, getAccessToken, getRefreshToken, setSession } from './session';
+
 export interface ApiError {
   code: string;
   message: string;
@@ -11,9 +13,10 @@ export interface ApiResult<T> {
 }
 
 /**
- * Thin fetch-based API client. Reads the base URL from NEXT_PUBLIC_API_URL and
- * attaches a bearer token from storage when present. Never trusts the server
- * for success; always inspects `error`.
+ * Thin fetch-based API client. Reads the base URL from NEXT_PUBLIC_API_URL,
+ * attaches a bearer token from storage, and transparently refreshes an expired
+ * access token using the refresh token (single retry). Never trusts the server
+ * for success; always inspect `error`.
  */
 export class ApiClient {
   private readonly baseUrl: string;
@@ -23,21 +26,21 @@ export class ApiClient {
   }
 
   private token(): string | null {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem('servana_token');
+    return getAccessToken();
   }
 
-  async request<T>(path: string, init: RequestInit = {}): Promise<ApiResult<T>> {
+  async request<T>(path: string, init: RequestInit = {}, _retry = false): Promise<ApiResult<T>> {
     const headers = new Headers(init.headers);
     headers.set('Content-Type', 'application/json');
     const token = this.token();
     if (token) headers.set('Authorization', `Bearer ${token}`);
 
     try {
-      const res = await fetch(`${this.baseUrl}/api/v1${path}`, {
-        ...init,
-        headers,
-      });
+      const res = await fetch(`${this.baseUrl}/api/v1${path}`, { ...init, headers });
+      if (res.status === 401 && !_retry) {
+        const refreshed = await this.tryRefresh();
+        if (refreshed) return this.request<T>(path, init, true);
+      }
       const body = await res.json().catch(() => undefined);
       if (!res.ok) {
         return {
@@ -47,10 +50,31 @@ export class ApiClient {
       }
       return { status: res.status, data: body?.data };
     } catch (err) {
-      return {
-        status: 0,
-        error: { code: 'NETWORK_ERROR', message: (err as Error).message },
-      };
+      return { status: 0, error: { code: 'NETWORK_ERROR', message: (err as Error).message } };
+    }
+  }
+
+  private async tryRefresh(): Promise<boolean> {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return false;
+    try {
+      const res = await fetch(`${this.baseUrl}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) {
+        clearSession();
+        return false;
+      }
+      const body = await res.json();
+      if (body?.data?.accessToken) {
+        setSession({ accessToken: body.data.accessToken, refreshToken: body.data.refreshToken ?? refreshToken });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
   }
 
@@ -60,6 +84,10 @@ export class ApiClient {
 
   post<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
     return this.request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) });
+  }
+
+  patch<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
+    return this.request<T>(path, { method: 'PATCH', body: JSON.stringify(body ?? {}) });
   }
 }
 
