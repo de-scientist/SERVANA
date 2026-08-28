@@ -1,0 +1,18 @@
+
+> api@0.1.0 lint
+> eslint "src/**/*.ts" --max-warnings=0
+
+
+E:\SERVANA\apps\api\src\modules\users\users.service.spec.ts
+  1:29  warning  'NotFoundException' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+ 1 problem (0 errors, 1 warning)
+
+ESLint found too many warnings (maximum: 0).
+npm error Lifecycle script `lint` failed with error:
+npm error code 1
+npm error path E:\SERVANA\apps\api
+npm error workspace api@0.1.0
+npm error location E:\SERVANA\apps\api
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c eslint "src/**/*.ts" --max-warnings=0

@@ -1,0 +1,57 @@
+
+> api@0.1.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+src/modules/audit/audit.service.ts(25,25): error TS2339: Property 'auditLog' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(66,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(107,38): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(113,23): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(119,38): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(123,25): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(129,23): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(137,38): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(150,23): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(161,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(177,36): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(182,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(187,23): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(192,36): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(196,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(207,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(223,23): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(231,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/auth/auth.service.ts(255,23): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/health/health.controller.ts(31,25): error TS2339: Property '$queryRaw' does not exist on type 'PrismaService'.
+src/modules/prisma/prisma.service.ts(2,10): error TS2305: Module '"@prisma/client"' has no exported member 'PrismaClient'.
+src/modules/prisma/prisma.service.ts(10,18): error TS2339: Property '$connect' does not exist on type 'PrismaService'.
+src/modules/rbac/rbac.service.ts(45,40): error TS2339: Property 'permission' does not exist on type 'PrismaService'.
+src/modules/rbac/rbac.service.ts(52,25): error TS2339: Property 'role' does not exist on type 'PrismaService'.
+src/modules/rbac/rbac.service.ts(61,42): error TS2339: Property 'role' does not exist on type 'PrismaService'.
+src/modules/rbac/rbac.service.ts(63,23): error TS2339: Property 'userRole' does not exist on type 'PrismaService'.
+src/modules/rbac/rbac.service.ts(71,37): error TS2339: Property 'userRole' does not exist on type 'PrismaService'.
+src/modules/rbac/rbac.service.ts(79,37): error TS2339: Property 'userRole' does not exist on type 'PrismaService'.
+src/modules/users/users.service.spec.ts(3,10): error TS2305: Module '"@prisma/client"' has no exported member 'Prisma'.
+src/modules/users/users.service.ts(3,10): error TS2305: Module '"@prisma/client"' has no exported member 'Prisma'.
+src/modules/users/users.service.ts(3,18): error TS2305: Module '"@prisma/client"' has no exported member 'UserStatus'.
+src/modules/users/users.service.ts(33,40): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(35,36): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(42,24): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(49,36): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(55,37): error TS2339: Property 'userRole' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(63,36): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(95,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(100,36): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(105,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(107,23): error TS2339: Property 'refreshToken' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(111,36): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(115,37): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(117,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(126,37): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+src/modules/users/users.service.ts(142,23): error TS2339: Property 'user' does not exist on type 'PrismaService'.
+npm error Lifecycle script `typecheck` failed with error:
+npm error code 2
+npm error path E:\SERVANA\apps\api
+npm error workspace api@0.1.0
+npm error location E:\SERVANA\apps\api
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c tsc --noEmit -p tsconfig.json
