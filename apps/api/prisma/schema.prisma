@@ -1,0 +1,842 @@
+// SERVANA — Prisma schema (Phase 1 base, derived from docs/DATABASE.md)
+// Money is stored as BigInt minor units (e.g. KES cents). Never Float.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity & RBAC
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  status       UserStatus @default(ACTIVE)
+  roles        UserRole[]
+  customerProfile  CustomerProfile?
+  providerProfile  ProviderProfile?
+  refreshTokens     RefreshToken[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+model Role {
+  id        String    @id @default(uuid())
+  name      String    @unique // USER, CUSTOMER, PROVIDER, SUPPORT, ADMIN, SUPER_ADMIN
+  permissions Permission[]
+  users     UserRole[]
+}
+
+model Permission {
+  id    String @id @default(uuid())
+  key   String @unique // e.g. "booking:refund"
+  roles Role[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
+  @@id([userId, roleId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Customers & Providers
+// ---------------------------------------------------------------------------
+
+model CustomerProfile {
+  id        String  @id @default(uuid())
+  userId    String  @unique
+  user      User    @relation(fields: [userId], references: [id])
+  favourites Favourite[]
+  loyalty   LoyaltyAccount?
+  createdAt DateTime @default(now())
+}
+
+model Favourite {
+  id            String  @id @default(uuid())
+  customerId    String
+  customer      CustomerProfile @relation(fields: [customerId], references: [id])
+  targetType    String // provider | service | product
+  targetId      String
+  createdAt     DateTime @default(now())
+  @@unique([customerId, targetType, targetId])
+  @@index([customerId])
+}
+
+model ProviderProfile {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  user            User            @relation(fields: [userId], references: [id])
+  businessName    String?
+  slug            String          @unique
+  bio             String?
+  lat             Float?
+  lng             Float?
+  serviceRadiusKm Float?
+  travelToCustomer Boolean        @default(false)
+  status          ProviderStatus  @default(DRAFT)
+  verification    ProviderVerification?
+  documents       ProviderDocument[]
+  services        ProviderService[]
+  availabilities  AvailabilityRule[]
+  exceptions      AvailabilityException[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+enum ProviderStatus {
+  DRAFT
+  PENDING_VERIFICATION
+  VERIFIED
+  SUSPENDED
+}
+
+model ProviderVerification {
+  id          String            @id @default(uuid())
+  providerId  String            @unique
+  provider    ProviderProfile   @relation(fields: [providerId], references: [id])
+  level       VerificationLevel @default(BASIC)
+  expiresAt   DateTime?
+  verifiedById String?
+  verifiedAt  DateTime?
+}
+
+enum VerificationLevel {
+  BASIC
+  PHONE_VERIFIED
+  IDENTITY_VERIFIED
+  PROFESSIONAL_VERIFIED
+  BUSINESS_VERIFIED
+  TRUSTED_PROVIDER
+}
+
+model ProviderDocument {
+  id         String          @id @default(uuid())
+  providerId String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id])
+  kind       String // ID, CERT, BUSINESS_REG
+  storageKey String
+  uploadedAt DateTime        @default(now())
+  @@index([providerId])
+}
+
+// ---------------------------------------------------------------------------
+// Categories & Services
+// ---------------------------------------------------------------------------
+
+model Category {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  name      String
+  parentId  String?
+  parent    Category? @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  services  Service[]
+  products  Product[]
+}
+
+model Service {
+  id           String   @id @default(uuid())
+  categoryId   String
+  category     Category @relation(fields: [categoryId], references: [id])
+  name         String
+  description  String?
+  basePriceCents BigInt
+  currency     String   @default("KES")
+  durationMin  Int
+  deliveryTypes ServiceDeliveryType[]
+  options      ServiceOption[]
+  providerServices ProviderService[]
+}
+
+enum ServiceDeliveryType {
+  AT_PROVIDER_LOCATION
+  AT_CUSTOMER_LOCATION
+  REMOTE
+  EITHER
+}
+
+model ServiceOption {
+  id            String  @id @default(uuid())
+  serviceId     String
+  service       Service @relation(fields: [serviceId], references: [id])
+  label         String
+  priceDeltaCents BigInt @default(0)
+}
+
+model ProviderService {
+  id             String  @id @default(uuid())
+  providerId     String
+  provider       ProviderProfile @relation(fields: [providerId], references: [id])
+  serviceId      String
+  service        Service @relation(fields: [serviceId], references: [id])
+  priceCents     BigInt
+  currency       String  @default("KES")
+  isActive       Boolean @default(true)
+  bookings       Booking[]
+  @@unique([providerId, serviceId])
+  @@index([providerId])
+}
+
+// ---------------------------------------------------------------------------
+// Availability
+// ---------------------------------------------------------------------------
+
+model AvailabilityRule {
+  id         String @id @default(uuid())
+  providerId String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id])
+  dayOfWeek  Int // 0-6
+  startMin   Int
+  endMin     Int
+  breakStart Int?
+  breakEnd   Int?
+  @@index([providerId])
+}
+
+model AvailabilityException {
+  id         String         @id @default(uuid())
+  providerId String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id])
+  date       DateTime
+  type       ExceptionType
+  @@index([providerId, date])
+}
+
+enum ExceptionType {
+  TIME_OFF
+  EXTRA
+  HOLIDAY
+}
+
+// ---------------------------------------------------------------------------
+// Bookings
+// ---------------------------------------------------------------------------
+
+model Booking {
+  id               String         @id @default(uuid())
+  customerId       String
+  providerId       String
+  serviceId        String
+  providerServiceId String
+  status           BookingStatus  @default(PENDING)
+  startsAt         DateTime
+  endsAt           DateTime
+  deliveryType     ServiceDeliveryType
+  address          Json?
+  priceCents       BigInt
+  currency         String         @default("KES")
+  paymentStatus    PaymentStatus  @default(INITIATED)
+  cancellationReason String?
+  createdAt        DateTime       @default(now())
+  history          BookingStatusHistory[]
+  payment          Payment?
+  review           Review?
+  providerService  ProviderService @relation(fields: [providerServiceId], references: [id])
+}
+
+enum BookingStatus {
+  PENDING
+  AWAITING_PAYMENT
+  PAID
+  CONFIRMED
+  PROVIDER_ACCEPTED
+  PROVIDER_REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  DISPUTED
+  REFUNDED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  SUCCESSFUL
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model BookingStatusHistory {
+  id        String   @id @default(uuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  from      BookingStatus?
+  to        BookingStatus
+  actorId   String?
+  reason    String?
+  createdAt DateTime @default(now())
+  @@index([bookingId])
+}
+
+// ---------------------------------------------------------------------------
+// Financial ledger (immutable)
+// ---------------------------------------------------------------------------
+
+model Payment {
+  id              String   @id @default(uuid())
+  bookingId       String?  @unique
+  orderId         String?  @unique
+  customerId      String
+  providerId      String?
+  amountCents     BigInt
+  currency        String   @default("KES")
+  status          PaymentStatus
+  provider        String
+  providerRef     String?
+  idempotencyKey  String   @unique
+  grossCents      BigInt
+  discountCents   BigInt   @default(0)
+  taxCents        BigInt   @default(0)
+  feeCents        BigInt   @default(0)
+  commissionCents BigInt   @default(0)
+  netCents        BigInt
+  createdAt       DateTime @default(now())
+  transactions    PaymentTransaction[]
+  refunds         Refund[]
+  booking         Booking?         @relation(fields: [bookingId], references: [id])
+  commission      Commission?
+}
+
+model PaymentTransaction {
+  id          String @id @default(uuid())
+  paymentId   String
+  payment     Payment @relation(fields: [paymentId], references: [id])
+  type        TxnType
+  amountCents BigInt
+  currency    String
+  createdAt   DateTime @default(now())
+}
+
+enum TxnType {
+  CAPTURE
+  FEE
+  REFUND
+  PAYOUT
+  ADJUSTMENT
+}
+
+model Refund {
+  id          String  @id @default(uuid())
+  paymentId   String
+  payment     Payment @relation(fields: [paymentId], references: [id])
+  amountCents BigInt
+  reason      String?
+  createdAt   DateTime @default(now())
+}
+
+model CommissionRule {
+  id        String           @id @default(uuid())
+  scope     String // standard | category:hair | provider:<id> | tier:premium
+  type      CommissionType
+  value     BigInt // percent in basis points or fixed cents
+  priority  Int
+  validFrom DateTime
+  validTo   DateTime?
+}
+
+enum CommissionType {
+  PERCENTAGE
+  FIXED
+}
+
+model Commission {
+  id             String   @id @default(uuid())
+  paymentId      String   @unique
+  payment        Payment   @relation(fields: [paymentId], references: [id])
+  ruleSnapshot   Json
+  baseCents      BigInt
+  rateBasisPoints Int
+  commissionCents BigInt
+  createdAt      DateTime @default(now())
+}
+
+model ProviderEarning {
+  id              String        @id @default(uuid())
+  providerId      String
+  bookingId       String?       @unique
+  orderId         String?       @unique
+  grossCents      BigInt
+  commissionCents BigInt
+  feeCents        BigInt
+  refundCents     BigInt        @default(0)
+  adjustmentCents BigInt        @default(0)
+  netCents        BigInt
+  status          EarningStatus  @default(PENDING)
+  createdAt       DateTime       @default(now())
+  payoutItems     PayoutItem[]
+}
+
+enum EarningStatus {
+  PENDING
+  AVAILABLE
+  PAID
+  REVERSED
+}
+
+model PayoutMethod {
+  id        String           @id @default(uuid())
+  providerId String
+  type      PayoutMethodType
+  detailsRef String
+  isDefault Boolean          @default(false)
+}
+
+enum PayoutMethodType {
+  MPESA
+  BANK
+}
+
+model Payout {
+  id          String        @id @default(uuid())
+  providerId String
+  methodId    String
+  status      PayoutStatus  @default(PENDING)
+  totalCents BigInt
+  currency    String        @default("KES")
+  reference   String        @unique
+  createdAt   DateTime      @default(now())
+  items       PayoutItem[]
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  SUCCESSFUL
+  FAILED
+  REVERSED
+}
+
+model PayoutItem {
+  id         String    @id @default(uuid())
+  payoutId   String
+  payout     Payout    @relation(fields: [payoutId], references: [id])
+  earningId  String
+  earning    ProviderEarning @relation(fields: [earningId], references: [id])
+  amountCents BigInt
+  @@unique([payoutId, earningId])
+}
+
+// ---------------------------------------------------------------------------
+// Products & Orders
+// ---------------------------------------------------------------------------
+
+model Product {
+  id         String   @id @default(uuid())
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  name       String
+  brand      String?
+  sku        String   @unique
+  priceCents BigInt
+  saleCents  BigInt?
+  currency   String   @default("KES")
+  status     ProductStatus @default(ACTIVE)
+  providerId String?
+  variants   ProductVariant[]
+  inventory  Inventory[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+model ProductVariant {
+  id              String  @id @default(uuid())
+  productId       String
+  product         Product @relation(fields: [productId], references: [id])
+  attrs           Json
+  priceDeltaCents BigInt   @default(0)
+}
+
+model Inventory {
+  id         String  @id @default(uuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  variantId  String?
+  quantity   Int
+  reserved   Int     @default(0)
+  @@unique([productId, variantId])
+}
+
+model Cart {
+  id        String  @id @default(uuid())
+  customerId String  @unique
+  items     CartItem[]
+}
+
+model CartItem {
+  id         String  @id @default(uuid())
+  cartId     String
+  cart       Cart    @relation(fields: [cartId], references: [id])
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  variantId  String?
+  qty        Int
+  @@unique([cartId, productId, variantId])
+}
+
+model Order {
+  id             String       @id @default(uuid())
+  customerId     String
+  status         OrderStatus  @default(CREATED)
+  subtotalCents  BigInt
+  discountCents  BigInt       @default(0)
+  totalCents     BigInt
+  currency       String       @default("KES")
+  items          OrderItem[]
+  history        OrderStatusHistory[]
+  payment        Payment?
+}
+
+enum OrderStatus {
+  CREATED
+  PAID
+  FULFILLMENT
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+model OrderItem {
+  id         String  @id @default(uuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id])
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  variantId  String?
+  qty        Int
+  unitCents  BigInt
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(uuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id])
+  from      OrderStatus?
+  to        OrderStatus
+  createdAt DateTime    @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Reviews, Ratings, Disputes, Fraud
+// ---------------------------------------------------------------------------
+
+model Review {
+  id         String  @id @default(uuid())
+  bookingId  String  @unique
+  orderId    String? @unique
+  customerId String
+  providerId String
+  overall    Int
+  title      String?
+  body       String?
+  dimensions ReviewDimension[]
+  response   ReviewResponse?
+  reported   Boolean @default(false)
+  createdAt  DateTime @default(now())
+  booking    Booking? @relation(fields: [bookingId], references: [id])
+}
+
+model ReviewDimension {
+  id       String @id @default(uuid())
+  reviewId String
+  review   Review @relation(fields: [reviewId], references: [id])
+  name     String
+  score    Int
+}
+
+model ReviewResponse {
+  id       String @id @default(uuid())
+  reviewId String @unique
+  review   Review @relation(fields: [reviewId], references: [id])
+  body     String
+  createdAt DateTime @default(now())
+}
+
+model ProviderRankingSnapshot {
+  id                String   @id @default(uuid())
+  providerId        String   @unique
+  qualityScore      Float
+  completedJobs     Int      @default(0)
+  repeatRate        Float    @default(0)
+  cancellationRate  Float    @default(0)
+  responseRate      Float    @default(0)
+  onTimeRate        Float    @default(0)
+  computedAt        DateTime @default(now())
+  @@index([qualityScore])
+}
+
+model Dispute {
+  id          String         @id @default(uuid())
+  bookingId   String?
+  orderId     String?
+  openedById  String
+  status      DisputeStatus  @default(OPEN)
+  resolution  DisputeResolution?
+  messages    DisputeMessage[]
+}
+
+enum DisputeStatus {
+  OPEN
+  REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum DisputeResolution {
+  REFUND
+  PARTIAL_REFUND
+  REJECTED
+  ADJUST_PAYOUT
+}
+
+model DisputeMessage {
+  id        String  @id @default(uuid())
+  disputeId String
+  dispute   Dispute @relation(fields: [disputeId], references: [id])
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model FraudAlert {
+  id        String       @id @default(uuid())
+  entityType String
+  entityId   String
+  score      Int
+  reason     String
+  status     FraudStatus @default(OPEN)
+}
+
+enum FraudStatus {
+  OPEN
+  REVIEWED
+  FALSE_POSITIVE
+  ACTIONED
+}
+
+// ---------------------------------------------------------------------------
+// Loyalty / Referrals / Promotions
+// ---------------------------------------------------------------------------
+
+model LoyaltyAccount {
+  id          String   @id @default(uuid())
+  customerId  String   @unique
+  customer    CustomerProfile @relation(fields: [customerId], references: [id])
+  tierId      String
+  balanceCents BigInt   @default(0)
+  createdAt   DateTime @default(now())
+  transactions LoyaltyTransaction[]
+}
+
+model LoyaltyTransaction {
+  id         String           @id @default(uuid())
+  accountId  String
+  account    LoyaltyAccount   @relation(fields: [accountId], references: [id])
+  type       LoyaltyTxnType
+  deltaCents BigInt
+  reason     String
+  refType    String?
+  refId      String?
+  createdAt  DateTime         @default(now())
+  @@index([accountId])
+}
+
+enum LoyaltyTxnType {
+  EARN_BOOKING
+  EARN_REVIEW
+  EARN_REFERRAL
+  EARN_PURCHASE
+  BONUS
+  REDEEM
+}
+
+model Reward {
+  id        String @id @default(uuid())
+  name      String
+  costCents BigInt
+}
+
+model LoyaltyTier {
+  id            String @id @default(uuid())
+  name          String
+  thresholdCents BigInt
+}
+
+model ReferralCode {
+  id         String @id @default(uuid())
+  customerId String
+  code       String @unique
+}
+
+model Referral {
+  id             String        @id @default(uuid())
+  codeId         String
+  referredId     String
+  campaignId     String?
+  firstBookingId String?
+  rewardStatus   RewardStatus  @default(PENDING)
+}
+
+enum RewardStatus {
+  PENDING
+  QUALIFIED
+  PAID
+}
+
+model Promotion {
+  id        String        @id @default(uuid())
+  code      String        @unique
+  kind      PromotionKind
+  value     BigInt
+  validFrom DateTime
+  validTo   DateTime?
+}
+
+enum PromotionKind {
+  PERCENTAGE
+  FIXED
+  FREE_SHIP
+}
+
+model PromotionRedemption {
+  id       String @id @default(uuid())
+  promoId  String
+  bookingId String?
+  orderId   String?
+}
+
+// ---------------------------------------------------------------------------
+// Notifications, Messaging
+// ---------------------------------------------------------------------------
+
+model NotificationTemplate {
+  id       String @id @default(uuid())
+  key      String @unique
+  channel  String
+  subject  String?
+  body     String
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  channel    String
+  templateKey String?
+  body       String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  @@index([userId])
+}
+
+model Conversation {
+  id        String  @id @default(uuid())
+  bookingId String?
+  participantIds String[]
+  messages  Message[]
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id            String  @id @default(uuid())
+  conversationId String
+  conversation  Conversation @relation(fields: [conversationId], references: [id])
+  senderId      String
+  body          String
+  read          Boolean @default(false)
+  createdAt     DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Events / Audit / Attribution
+// ---------------------------------------------------------------------------
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  type      String
+  payload   Json
+  userId    String?
+  createdAt DateTime @default(now())
+  @@index([type, createdAt])
+}
+
+model SearchEvent {
+  id        String   @id @default(uuid())
+  query     String
+  filters   Json
+  userId    String?
+  createdAt DateTime @default(now())
+}
+
+model RecommendationEvent {
+  id        String @id @default(uuid())
+  userId    String
+  itemType  String
+  itemId    String
+  source    String
+  createdAt DateTime @default(now())
+}
+
+model Attribution {
+  id         String   @id @default(uuid())
+  sessionId  String?
+  userId     String?
+  utmSource  String?
+  utmMedium  String?
+  utmCampaign String?
+  utmContent String?
+  referralCode String?
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String
+  before    Json?
+  after     Json?
+  ip        String?
+  createdAt DateTime @default(now())
+  @@index([entity, entityId])
+}

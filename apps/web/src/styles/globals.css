@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Design tokens — premium, warm, beauty-aware */
+  --background: 30 33% 98%;
+  --foreground: 240 10% 12%;
+
+  --primary: 330 65% 52%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 260 40% 55%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 30 10% 94%;
+  --muted-foreground: 240 5% 40%;
+
+  --accent: 28 90% 60%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 12%;
+
+  --border: 30 10% 88%;
+  --input: 30 10% 88%;
+  --ring: 330 65% 52%;
+
+  --radius: 0.75rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
