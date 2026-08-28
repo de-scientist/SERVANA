@@ -1,17 +1,17 @@
-node.exe : PASS test/auth.integration.spec.ts (40.548 s)
+node.exe : PASS test/auth.integration.spec.ts (33.279 s)
 At line:1 char:1
 + & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
 + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (PASS test/auth....c.ts (40.548 s):String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (PASS test/auth....c.ts (33.279 s):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
   Auth flow (integration, real Postgres)
-     registers, verifies email, logs in, rotates refresh, and revokes on logout (682 ms)
-     rejects login with the wrong password (633 ms)
-     completes the forgot-password / reset-password flow (598 ms)
+     registers, verifies email, logs in, rotates refresh, and revokes on logout (464 ms)
+     rejects login with the wrong password (483 ms)
+     completes the forgot-password / reset-password flow (1600 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       3 passed, 3 total
 Snapshots:   0 total
-Time:        41.718 s, estimated 70 s
+Time:        38.819 s, estimated 41 s
 Ran all test suites.
