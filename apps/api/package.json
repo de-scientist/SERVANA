@@ -13,7 +13,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:diff": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script"
+    "db:diff": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
+    "db:seed:admin": "node scripts/seed-super-admin.js",
+    "test:integration": "jest --config jest.integration.config.js --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -31,10 +33,11 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
     "@types/bcryptjs": "^2.4.6",
+    "@types/express": "^5.0.0",
     "@types/jest": "^29.5.12",
     "@types/node": "^22.0.0",
-    "@types/express": "^5.0.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.57.0",

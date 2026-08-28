@@ -15,7 +15,7 @@ import { AiModule } from './common/adapters/ai/ai.module';
 import { NotificationModule } from './common/adapters/notification/notification.module';
 import { StorageModule } from './common/adapters/storage/storage.module';
 import { ThrottlerGuard } from './common/guards/throttler.guard';
-import { AppLoggerService } from './common/logging/logger.service';
+import { LoggingModule } from './common/logging/logging.module';
 
 @Module({
   imports: [
@@ -33,9 +33,9 @@ import { AppLoggerService } from './common/logging/logger.service';
     AiModule,
     NotificationModule,
     StorageModule,
+    LoggingModule,
   ],
   providers: [
-    AppLoggerService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

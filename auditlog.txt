@@ -1,0 +1,16 @@
+
+> apps\api\prisma\schema.prisma:849:model AuditLog {
+  apps\api\prisma\schema.prisma:850:  id        String   @id @default(uuid())
+  apps\api\prisma\schema.prisma:851:  actorId   String?
+  apps\api\prisma\schema.prisma:852:  action    String
+  apps\api\prisma\schema.prisma:853:  entity    String
+  apps\api\prisma\schema.prisma:854:  entityId  String
+  apps\api\prisma\schema.prisma:855:  before    Json?
+  apps\api\prisma\schema.prisma:856:  after     Json?
+  apps\api\prisma\schema.prisma:857:  ip        String?
+  apps\api\prisma\schema.prisma:858:  createdAt DateTime @default(now())
+  apps\api\prisma\schema.prisma:859:  @@index([entity, entityId])
+  apps\api\prisma\schema.prisma:860:}
+
+
+

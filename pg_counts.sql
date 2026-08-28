@@ -1,0 +1,1 @@
+SELECT (SELECT count(*) FROM "User") AS users, (SELECT count(*) FROM "RefreshToken") AS rts, (SELECT count(*) FROM "userRole") AS urs;
