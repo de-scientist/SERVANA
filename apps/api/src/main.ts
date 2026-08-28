@@ -1,10 +1,10 @@
 import 'reflect-metadata';
 import { appendFileSync } from 'fs';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { AppLoggerService } from './common/logging/logger.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
 
 function trace(msg: string): void {
   try {
@@ -30,14 +30,9 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix('api/v1');
   app.enableCors({ origin: origins, credentials: true });
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: false,
-      transformOptions: { enableImplicitConversion: true },
-    }),
-  );
+  // Global validation is Zod-based per-route (see ZodValidationPipe). The global
+  // pipe is a safe pass-through; routes attach a schema via @Body(new ZodValidationPipe(schema)).
+  app.useGlobalPipes(new ZodValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
 
   await app.listen(port);
