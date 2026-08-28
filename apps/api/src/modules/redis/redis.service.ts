@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
+import { appendFileSync } from 'fs';
 
 @Injectable()
 export class RedisService implements OnModuleInit {
@@ -21,9 +22,15 @@ export class RedisService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     if (this.client) {
       try {
+        appendFileSync('E:/SERVANA/apps/api/boot_trace.log', 'redis init start\n');
         await this.client.connect();
+        appendFileSync('E:/SERVANA/apps/api/boot_trace.log', 'redis init done\n');
         this.logger.log('Redis connected');
       } catch (err) {
+        appendFileSync(
+          'E:/SERVANA/apps/api/boot_trace.log',
+          `redis init error: ${(err as Error).message}\n`,
+        );
         this.logger.warn(`Redis connect failed: ${(err as Error).message}`);
       }
     }
