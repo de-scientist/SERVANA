@@ -4,7 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import { createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { LoginInput, RegisterInput } from './dto/auth.schema';
 
 export interface TokenPair {
   accessToken: string;
@@ -27,7 +27,7 @@ export class AuthService {
     return process.env.JWT_REFRESH_SECRET ?? 'change_me_refresh';
   }
 
-  async register(dto: RegisterDto): Promise<{ id: string; email: string }> {
+  async register(dto: RegisterInput): Promise<{ id: string; email: string }> {
     const passwordHash = await bcrypt.hash(
       dto.password,
       Number(process.env.BCRYPT_ROUNDS ?? 10),
@@ -35,7 +35,7 @@ export class AuthService {
     return this.users.create(dto.email, passwordHash);
   }
 
-  async login(dto: LoginDto): Promise<TokenPair> {
+  async login(dto: LoginInput): Promise<TokenPair> {
     const user = await this.users.findByEmail(dto.email);
     if (!user) throw new UnauthorizedException('Invalid credentials');
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
