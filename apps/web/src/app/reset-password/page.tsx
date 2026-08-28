@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/components/providers/toast';
 import { Spinner } from '@/components/ui/spinner';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get('token') ?? '';
@@ -74,5 +74,13 @@ export default function ResetPasswordPage() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <React.Suspense fallback={<Spinner className="m-auto h-6 w-6" />}>
+      <ResetPasswordForm />
+    </React.Suspense>
   );
 }

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Spinner } from '@/components/ui/spinner';
 import { useToast } from '@/components/providers/toast';
 
-export default function VerifyEmailPage() {
+function VerifyEmailForm() {
   const params = useSearchParams();
   const token = params.get('token') ?? '';
   const { toast } = useToast();
@@ -20,17 +20,15 @@ export default function VerifyEmailPage() {
       return;
     }
     setStatus('loading');
-    apiClient
-      .post('/auth/verify-email', { token })
-      .then((res) => {
-        if (res.error) {
-          setStatus('error');
-          toast(res.error.message, 'error');
-        } else {
-          setStatus('ok');
-          toast('Email verified. Thank you!', 'success');
-        }
-      });
+    apiClient.post('/auth/verify-email', { token }).then((res) => {
+      if (res.error) {
+        setStatus('error');
+        toast(res.error.message, 'error');
+      } else {
+        setStatus('ok');
+        toast('Email verified. Thank you!', 'success');
+      }
+    });
   }, [token, toast]);
 
   return (
@@ -53,5 +51,13 @@ export default function VerifyEmailPage() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <React.Suspense fallback={<Spinner className="m-auto h-6 w-6" />}>
+      <VerifyEmailForm />
+    </React.Suspense>
   );
 }
