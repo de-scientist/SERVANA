@@ -5,7 +5,7 @@ import {
   Patch,
   Req,
 } from '@nestjs/common';
-import { ExpressRequest } from 'express';
+import { Request as ExpressRequest } from 'express';
 import { UsersService } from './users.service';
 import { AuditService } from '../audit/audit.service';
 import { Authenticated, CurrentUser } from '../auth/guards/current-user.decorator';

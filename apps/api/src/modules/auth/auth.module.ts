@@ -15,7 +15,7 @@ import { AuditModule } from '../audit/audit.module';
     RbacModule,
     AuditModule,
     NotificationModule,
-    JwtModule.forRoot({
+    JwtModule.register({
       isGlobal: true,
       secret: process.env.JWT_ACCESS_SECRET ?? 'change_me_access',
       signOptions: { expiresIn: Number(process.env.JWT_ACCESS_TTL ?? 900) },

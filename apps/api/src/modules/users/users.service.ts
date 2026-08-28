@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../prisma/prisma.service';
+import { Prisma, PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileInput } from './dto/profile.schema';
 
 export interface UserProfile {
