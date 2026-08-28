@@ -19,7 +19,21 @@ model User {
   email        String     @unique
   phone        String?    @unique
   passwordHash String
+  name         String
+  profileImage String?
   status       UserStatus @default(ACTIVE)
+  // Identity verification
+  emailVerified      Boolean   @default(false)
+  emailVerifyToken   String?   @map("email_verify_token")
+  emailVerifyExpires DateTime? @map("email_verify_expires")
+  // Password reset
+  passwordResetToken   String?  @map("password_reset_token")
+  passwordResetExpires DateTime? @map("password_reset_expires")
+  // Profile
+  preferences Json?
+  lat        Float?
+  lng        Float?
+  address    Json?
   roles        UserRole[]
   customerProfile  CustomerProfile?
   providerProfile  ProviderProfile?
@@ -27,6 +41,9 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   deletedAt    DateTime?
+
+  @@index([emailVerifyToken])
+  @@index([passwordResetToken])
 }
 
 enum UserStatus {
