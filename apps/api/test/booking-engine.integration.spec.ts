@@ -165,17 +165,17 @@ describe('Phase 5 · booking engine (integration)', () => {
       deliveryType: 'AT_PROVIDER_LOCATION',
     });
     expect(created.status).toBe(201);
-    expect(created.body.status).toBe('PENDING');
-    expect(created.body.paymentStatus).toBe('INITIATED');
-    expect(created.body.priceCents).toBe('200000');
-    expect(created.body.provider).toBeDefined();
+    expect(created.body.data.status).toBe('PENDING');
+    expect(created.body.data.paymentStatus).toBe('INITIATED');
+    expect(created.body.data.priceCents).toBe('200000');
+    expect(created.body.data.provider).toBeDefined();
 
     const list = await call('GET', '/bookings?view=upcoming', cust.accessToken);
     expect(list.body.data.length).toBe(1);
 
-    const detail = await call('GET', `/bookings/${created.body.id}`, cust.accessToken);
-    expect(detail.body.history.length).toBe(1);
-    expect(detail.body.history[0].to).toBe('PENDING');
+    const detail = await call('GET', `/bookings/${created.body.data.id}`, cust.accessToken);
+    expect(detail.body.data.history.length).toBe(1);
+    expect(detail.body.data.history[0].to).toBe('PENDING');
   });
 
   it('prevents double-booking under concurrent requests', async () => {
@@ -201,7 +201,7 @@ describe('Phase 5 · booking engine (integration)', () => {
     const { prov, serviceId } = await setupVerifiedProvider(`provc_${Date.now()}@example.com`);
     const startsAt = futureIso(0);
     const created = await call('POST', '/bookings', cust.accessToken, { providerServiceId: serviceId, startsAt, deliveryType: 'AT_PROVIDER_LOCATION' });
-    const id = created.body.id;
+    const id = created.body.data.id;
 
     // IN_PROGRESS from PENDING is invalid
     const bad = await call('PATCH', `/bookings/provider/${id}/start`, prov.accessToken);
@@ -210,17 +210,17 @@ describe('Phase 5 · booking engine (integration)', () => {
     // Provider confirms
     const confirm = await call('PATCH', `/bookings/provider/${id}/confirm`, prov.accessToken, {});
     expect(confirm.status).toBe(200);
-    expect(confirm.body.status).toBe('CONFIRMED');
+    expect(confirm.body.data.status).toBe('CONFIRMED');
 
     // Provider starts
     const start = await call('PATCH', `/bookings/provider/${id}/start`, prov.accessToken);
     expect(start.status).toBe(200);
-    expect(start.body.status).toBe('IN_PROGRESS');
+    expect(start.body.data.status).toBe('IN_PROGRESS');
 
     // Provider completes
     const complete = await call('PATCH', `/bookings/provider/${id}/complete`, prov.accessToken);
     expect(complete.status).toBe(200);
-    expect(complete.body.status).toBe('COMPLETED');
+    expect(complete.body.data.status).toBe('COMPLETED');
 
     // Cannot confirm a completed booking
     const again = await call('PATCH', `/bookings/provider/${id}/confirm`, prov.accessToken);
@@ -238,15 +238,15 @@ describe('Phase 5 · booking engine (integration)', () => {
 
     const startsAt = futureIso(2);
     const created = await call('POST', '/bookings', cust.accessToken, { providerServiceId: serviceId, startsAt, deliveryType: 'AT_PROVIDER_LOCATION' });
-    const id = created.body.id;
+    const id = created.body.data.id;
 
     const cancel = await call('PATCH', `/bookings/${id}/cancel`, cust.accessToken, { reason: 'Change of plans' });
     expect(cancel.status).toBe(200);
-    expect(cancel.body.status).toBe('CANCELLED');
-    expect(cancel.body.cancelFeeCents).toBe('100000');
-    expect(cancel.body.cancelledByRole).toBe('CUSTOMER');
-    expect(cancel.body.cancelledAt).toBeDefined();
-    expect(cancel.body.history[cancel.body.history.length - 1].to).toBe('CANCELLED');
+    expect(cancel.body.data.status).toBe('CANCELLED');
+    expect(cancel.body.data.cancelFeeCents).toBe('100000');
+    expect(cancel.body.data.cancelledByRole).toBe('CUSTOMER');
+    expect(cancel.body.data.cancelledAt).toBeDefined();
+    expect(cancel.body.data.history[cancel.body.data.history.length - 1].to).toBe('CANCELLED');
   });
 
   it('enforces ownership: customers cannot act on others bookings', async () => {
@@ -256,7 +256,8 @@ describe('Phase 5 · booking engine (integration)', () => {
     const startsAt = futureIso(3);
     const created = await call('POST', '/bookings', cust.accessToken, { providerServiceId: serviceId, startsAt, deliveryType: 'AT_PROVIDER_LOCATION' });
 
-    const forbidden = await call('PATCH', `/bookings/${created.body.id}/cancel`, other.accessToken, { reason: 'x' });
+    const forbidden = await call('PATCH', `/bookings/${created.body.data.id}/cancel`, other.accessToken, { reason: 'x' });
     expect(forbidden.status).toBe(403);
   });
 });
+
