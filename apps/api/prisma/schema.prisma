@@ -137,8 +137,9 @@ model ProviderProfile {
   portfolio       PortfolioItem[]
   availabilities  AvailabilityRule[]
   exceptions      AvailabilityException[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  cancellationPolicy Json?
 }
 
 enum ProviderStatus {
@@ -344,24 +345,36 @@ enum ExceptionType {
 
 model Booking {
   id               String         @id @default(uuid())
+  reference        String         @unique
   customerId       String
   providerId       String
-  serviceId        String
+  serviceId        String?
   providerServiceId String
   status           BookingStatus  @default(PENDING)
   startsAt         DateTime
   endsAt           DateTime
   deliveryType     ServiceDeliveryType
   address          Json?
+  notes            String?
   priceCents       BigInt
   currency         String         @default("KES")
   paymentStatus    PaymentStatus  @default(INITIATED)
   cancellationReason String?
+  cancelledById    String?
+  cancelledByRole  String?
+  cancelledAt      DateTime?
+  cancelFeeCents   BigInt?
   createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   history          BookingStatusHistory[]
   payment          Payment?
   review           Review?
   providerService  ProviderService @relation(fields: [providerServiceId], references: [id])
+
+  @@unique([providerId, startsAt])
+  @@index([customerId])
+  @@index([providerId, status])
+  @@index([startsAt])
 }
 
 enum BookingStatus {
@@ -397,6 +410,7 @@ model BookingStatusHistory {
   from      BookingStatus?
   to        BookingStatus
   actorId   String?
+  actorRole String?
   reason    String?
   createdAt DateTime @default(now())
   @@index([bookingId])
