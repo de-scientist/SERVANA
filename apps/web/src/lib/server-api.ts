@@ -76,3 +76,48 @@ export async function fetchProvider(slug: string): Promise<PublicProviderProfile
 export function formatPrice(amount: number, currency = 'KES'): string {
   return `${currency} ${amount.toLocaleString('en-KE', { maximumFractionDigits: 0 })}`;
 }
+
+export interface PublicService {
+  id: string;
+  name: string;
+  description: string | null;
+  categoryId: string | null;
+  durationMin: number;
+  bufferMin: number;
+  bookingWindowDays: number | null;
+  deliveryTypes: string[];
+  images: { key: string; url: string }[] | null;
+  isActive: boolean;
+  price: number;
+  priceCents: string;
+  currency: string;
+  travelFee: number | null;
+  travelFeeCents: string | null;
+  provider: {
+    id: string;
+    businessName: string | null;
+    slug: string;
+    city: string | null;
+    country: string | null;
+    travelToCustomer: boolean;
+    serviceRadiusKm: number | null;
+    yearsExperience: number | null;
+    languages: string[];
+    categories: { id: string; name: string; slug: string }[];
+    ownerName: string | null;
+    ownerImage: string | null;
+    verified: boolean;
+    verificationLevel: string | null;
+  };
+}
+
+export async function fetchService(id: string): Promise<PublicService | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/services/${encodeURIComponent(id)}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data: PublicService };
+    return json.data;
+  } catch {
+    return null;
+  }
+}
