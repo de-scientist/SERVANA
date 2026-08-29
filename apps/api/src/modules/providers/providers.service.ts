@@ -58,7 +58,7 @@ export class ProvidersService {
         bio: dto.bio ?? null,
         city: dto.city ?? null,
         country: dto.country ?? null,
-        address: (dto.address as Prisma.JsonValue) ?? Prisma.JsonNull,
+        address: (dto.address as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         lat: dto.lat ?? null,
         lng: dto.lng ?? null,
         serviceRadiusKm: dto.serviceRadiusKm ?? null,
@@ -67,8 +67,8 @@ export class ProvidersService {
         businessPhone: dto.businessPhone ?? null,
         yearsExperience: dto.yearsExperience ?? null,
         languages: dto.languages ?? [],
-        socialLinks: (dto.socialLinks as Prisma.JsonValue) ?? Prisma.JsonNull,
-        workingPreferences: (dto.workingPreferences as Prisma.JsonValue) ?? Prisma.JsonNull,
+        socialLinks: (dto.socialLinks as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+        workingPreferences: (dto.workingPreferences as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         status: ProviderStatus.DRAFT,
       },
     });
@@ -199,7 +199,7 @@ export class ProvidersService {
         durationMin: dto.durationMin,
         deliveryTypes: dto.deliveryTypes as Prisma.JsonValue,
         travelFeeCents: dto.travelFee !== undefined ? toMinorUnits(dto.travelFee) : null,
-        images: (dto.images as Prisma.JsonValue) ?? Prisma.JsonNull,
+        images: (dto.images as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         isActive: dto.isActive,
         sortOrder: dto.sortOrder ?? 0,
         bookingWindowDays: dto.bookingWindowDays ?? null,
@@ -250,7 +250,7 @@ export class ProvidersService {
     if (dto.durationMin !== undefined) data.durationMin = dto.durationMin;
     if (dto.deliveryTypes !== undefined) data.deliveryTypes = dto.deliveryTypes as Prisma.JsonValue;
     if (dto.travelFee !== undefined) data.travelFeeCents = toMinorUnits(dto.travelFee);
-    data.images = dto.images === undefined ? undefined : ((dto.images as Prisma.JsonValue) ?? Prisma.JsonNull);
+    data.images = dto.images === undefined ? undefined : ((dto.images as Prisma.InputJsonValue) ?? Prisma.JsonNull);
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.sortOrder !== undefined) data.sortOrder = dto.sortOrder;
     if (dto.bookingWindowDays !== undefined) data.bookingWindowDays = dto.bookingWindowDays;
@@ -295,7 +295,7 @@ export class ProvidersService {
         providerId: profile.id,
         title: dto.title,
         description: dto.description ?? null,
-        images: (dto.images as Prisma.JsonValue) ?? Prisma.JsonNull,
+        images: (dto.images as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         link: dto.link ?? null,
         sortOrder: dto.sortOrder ?? 0,
       },
@@ -327,7 +327,7 @@ export class ProvidersService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.link !== undefined) data.link = dto.link;
     if (dto.sortOrder !== undefined) data.sortOrder = dto.sortOrder;
-    data.images = dto.images === undefined ? undefined : ((dto.images as Prisma.JsonValue) ?? Prisma.JsonNull);
+    data.images = dto.images === undefined ? undefined : ((dto.images as Prisma.InputJsonValue) ?? Prisma.JsonNull);
     const updated = await this.prisma.portfolioItem.update({ where: { id }, data });
     await this.audit.record({ actorId: userId, action: 'provider.portfolio.update', entity: 'portfolioItem', entityId: id });
     return this.mapPortfolio(updated);
@@ -476,7 +476,7 @@ export class ProvidersService {
     const profile = await this.prisma.providerProfile.findUnique({
       where: { id },
       include: {
-        user: { select: { name: true, email: true, phone: true } },
+        user: { select: { name: true, email: true, phone: true, profileImage: true } },
         categories: { include: { category: true } },
         services: { orderBy: { sortOrder: 'asc' } },
         portfolio: { orderBy: { sortOrder: 'asc' } },
