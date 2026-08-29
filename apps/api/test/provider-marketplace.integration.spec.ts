@@ -6,6 +6,7 @@ import { PrismaModule } from '../src/modules/prisma/prisma.module';
 import { RbacModule } from '../src/modules/rbac/rbac.module';
 import { AuditModule } from '../src/modules/audit/audit.module';
 import { StorageModule } from '../src/common/adapters/storage/storage.module';
+import { LoggingModule } from '../src/common/logging/logging.module';
 import { NotificationModule } from '../src/common/adapters/notification/notification.module';
 import { UsersModule } from '../src/modules/users/users.module';
 import { AuthModule } from '../src/modules/auth/auth.module';
@@ -77,6 +78,7 @@ describe('Provider marketplace (integration)', () => {
         RbacModule,
         AuditModule,
         StorageModule,
+        LoggingModule,
         NotificationModule,
         UsersModule,
         AuthModule,
