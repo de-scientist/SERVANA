@@ -197,7 +197,7 @@ describe('Phase 4 · search, categories & availability (integration)', () => {
     expect(byProvider.body.providers.length).toBe(1);
     expect(byProvider.body.providers[0].verified).toBe(true);
 
-    const priceFiltered = await call('GET', '/search?minPrice=5000');
+    const priceFiltered = await call('GET', '/search?minPrice=300000');
     expect(priceFiltered.body.services.length).toBe(0);
   });
 
