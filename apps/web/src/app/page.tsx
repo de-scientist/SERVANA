@@ -15,8 +15,14 @@ export default function HomePage() {
       </section>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link
-          href="/providers"
+          href="/search"
           className="inline-flex h-11 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          Search services
+        </Link>
+        <Link
+          href="/providers"
+          className="inline-flex h-11 items-center rounded-md border border-input px-6 text-sm font-medium hover:bg-muted"
         >
           Explore providers
         </Link>
