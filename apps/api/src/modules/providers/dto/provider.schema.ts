@@ -131,3 +131,10 @@ export const listProvidersSchema = z.object({
 });
 
 export type ListProvidersInput = z.infer<typeof listProvidersSchema>;
+
+export const setProviderStatusSchema = z.object({
+  status: z.enum(['DRAFT', 'PENDING_VERIFICATION', 'VERIFIED', 'SUSPENDED']),
+  note: z.string().max(2000).optional(),
+});
+
+export type SetProviderStatusInput = z.infer<typeof setProviderStatusSchema>;
