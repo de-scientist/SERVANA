@@ -208,7 +208,7 @@ describe('Phase 5 · booking engine (integration)', () => {
     expect(bad.status).toBe(400);
 
     // Provider confirms
-    const confirm = await call('PATCH', `/bookings/provider/${id}/confirm`, prov.accessToken);
+    const confirm = await call('PATCH', `/bookings/provider/${id}/confirm`, prov.accessToken, {});
     expect(confirm.status).toBe(200);
     expect(confirm.body.status).toBe('CONFIRMED');
 
