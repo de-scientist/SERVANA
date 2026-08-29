@@ -101,13 +101,15 @@ describe('Phase 5 · booking engine (integration)', () => {
       isActive: true,
     });
     const serviceId = svc.body.data.id;
-    const dow = new Date().getUTCDay();
-    await call('PUT', '/providers/me/availability', prov.accessToken, {
-      rules: [{ dayOfWeek: dow, startMin: 0, endMin: 1440 }],
-      exceptions: [],
-    });
+    const rules = Array.from({ length: 7 }, (_, i) => ({ dayOfWeek: i, startMin: 0, endMin: 1440 }));
+    await call('PUT', '/providers/me/availability', prov.accessToken, { rules, exceptions: [] });
     await verifyProvider(email);
     return { prov, serviceId };
+  }
+
+  function futureIso(hourOffset = 0): string {
+    const d = new Date(Date.now() + 24 * 3600_000);
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 10 + hourOffset, 0, 0)).toISOString();
   }
 
   beforeAll(async () => {
@@ -155,7 +157,7 @@ describe('Phase 5 · booking engine (integration)', () => {
   it('creates a booking, validates price, and shows it in history views', async () => {
     const cust = await register('CUSTOMER', `cust_${Date.now()}@example.com`);
     const { serviceId } = await setupVerifiedProvider(`prov_${Date.now()}@example.com`);
-    const startsAt = new Date(Date.now() + 3 * 3600_000).toISOString();
+    const startsAt = futureIso(0);
 
     const created = await call('POST', '/bookings', cust.accessToken, {
       providerServiceId: serviceId,
@@ -180,7 +182,7 @@ describe('Phase 5 · booking engine (integration)', () => {
     const cust = await register('CUSTOMER', `cust2_${Date.now()}@example.com`);
     const custB = await register('CUSTOMER', `cust3_${Date.now()}@example.com`);
     const { serviceId } = await setupVerifiedProvider(`provb_${Date.now()}@example.com`);
-    const startsAt = new Date(Date.now() + 5 * 3600_000).toISOString();
+    const startsAt = futureIso(1);
 
     const [a, b] = await Promise.all([
       call('POST', '/bookings', cust.accessToken, { providerServiceId: serviceId, startsAt, deliveryType: 'AT_PROVIDER_LOCATION' }),
@@ -197,7 +199,7 @@ describe('Phase 5 · booking engine (integration)', () => {
   it('enforces the booking state machine and prevents invalid transitions', async () => {
     const cust = await register('CUSTOMER', `cust4_${Date.now()}@example.com`);
     const { prov, serviceId } = await setupVerifiedProvider(`provc_${Date.now()}@example.com`);
-    const startsAt = new Date(Date.now() + 6 * 3600_000).toISOString();
+    const startsAt = futureIso(0);
     const created = await call('POST', '/bookings', cust.accessToken, { providerServiceId: serviceId, startsAt, deliveryType: 'AT_PROVIDER_LOCATION' });
     const id = created.body.id;
 
@@ -229,7 +231,7 @@ describe('Phase 5 · booking engine (integration)', () => {
     const profile = await prisma.providerProfile.findFirst({ where: { userId: user!.id } });
     await prisma.providerProfile.update({ where: { id: profile!.id }, data: { cancellationPolicy: { freeCancelHours: 0, feePercent: 50 } } });
 
-    const startsAt = new Date(Date.now() + 26 * 3600_000).toISOString();
+    const startsAt = futureIso(2);
     const created = await call('POST', '/bookings', cust.accessToken, { providerServiceId: serviceId, startsAt, deliveryType: 'AT_PROVIDER_LOCATION' });
     const id = created.body.id;
 
@@ -246,7 +248,7 @@ describe('Phase 5 · booking engine (integration)', () => {
     const cust = await register('CUSTOMER', `cust6_${Date.now()}@example.com`);
     const other = await register('CUSTOMER', `cust7_${Date.now()}@example.com`);
     const { serviceId } = await setupVerifiedProvider(`prove_${Date.now()}@example.com`);
-    const startsAt = new Date(Date.now() + 8 * 3600_000).toISOString();
+    const startsAt = futureIso(3);
     const created = await call('POST', '/bookings', cust.accessToken, { providerServiceId: serviceId, startsAt, deliveryType: 'AT_PROVIDER_LOCATION' });
 
     const forbidden = await call('PATCH', `/bookings/${created.body.id}/cancel`, other.accessToken, { reason: 'x' });

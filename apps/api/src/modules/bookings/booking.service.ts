@@ -14,6 +14,7 @@ import {
   TERMINAL_STATUSES,
 } from './booking.state';
 import {
+  BookingActionInput,
   CancelBookingInput,
   CreateBookingInput,
   ListBookingsInput,
