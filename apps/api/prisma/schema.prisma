@@ -114,15 +114,27 @@ model ProviderProfile {
   user            User            @relation(fields: [userId], references: [id])
   businessName    String?
   slug            String          @unique
+  tagline         String?
   bio             String?
+  city            String?
+  country         String?
+  address         Json?
   lat             Float?
   lng             Float?
   serviceRadiusKm Float?
   travelToCustomer Boolean        @default(false)
+  websiteUrl      String?
+  businessPhone   String?
+  yearsExperience Int?
+  languages       String[]
+  socialLinks     Json?
+  workingPreferences Json?
   status          ProviderStatus  @default(DRAFT)
   verification    ProviderVerification?
   documents       ProviderDocument[]
+  categories      ProviderCategory[]
   services        ProviderService[]
+  portfolio       PortfolioItem[]
   availabilities  AvailabilityRule[]
   exceptions      AvailabilityException[]
   createdAt       DateTime        @default(now())
@@ -136,14 +148,55 @@ enum ProviderStatus {
   SUSPENDED
 }
 
+model ProviderCategory {
+  providerId String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category        @relation(fields: [categoryId], references: [id])
+  @@id([providerId, categoryId])
+}
+
+model PortfolioItem {
+  id          String          @id @default(uuid())
+  providerId  String
+  provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  images      Json? // array of { key, url }
+  link        String?
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  @@index([providerId])
+}
+
 model ProviderVerification {
   id          String            @id @default(uuid())
   providerId  String            @unique
   provider    ProviderProfile   @relation(fields: [providerId], references: [id])
   level       VerificationLevel @default(BASIC)
+  status      VerificationStatus @default(PENDING)
+  submittedAt DateTime?
+  reSubmittedAt DateTime?
+  reviewedAt  DateTime?
+  reviewedById String?
+  reviewedBy  User?             @relation(fields: [reviewedById], references: [id])
+  reviewerNotes String?
+  rejectionReason String?
   expiresAt   DateTime?
   verifiedById String?
   verifiedAt  DateTime?
+  history     ProviderVerificationHistory[]
+  documents   ProviderDocument[]
+}
+
+enum VerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+  EXPIRED
+  SUSPENDED
 }
 
 enum VerificationLevel {
@@ -155,13 +208,31 @@ enum VerificationLevel {
   TRUSTED_PROVIDER
 }
 
+model ProviderVerificationHistory {
+  id            String            @id @default(uuid())
+  providerId    String
+  provider      ProviderProfile   @relation(fields: [providerId], references: [id])
+  verificationId String
+  verification  ProviderVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  fromStatus    VerificationStatus?
+  toStatus      VerificationStatus
+  actorId       String?
+  note          String?
+  createdAt     DateTime          @default(now())
+  @@index([providerId])
+  @@index([verificationId])
+}
+
 model ProviderDocument {
-  id         String          @id @default(uuid())
-  providerId String
-  provider   ProviderProfile @relation(fields: [providerId], references: [id])
-  kind       String // ID, CERT, BUSINESS_REG
-  storageKey String
-  uploadedAt DateTime        @default(now())
+  id           String          @id @default(uuid())
+  providerId   String
+  provider     ProviderProfile @relation(fields: [providerId], references: [id])
+  verificationId String?
+  verification ProviderVerification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
+  kind         String // ID, CERT, BUSINESS_REG, PORTFOLIO, OTHER
+  storageKey   String
+  contentType  String?
+  uploadedAt   DateTime        @default(now())
   @@index([providerId])
 }
 
@@ -213,13 +284,24 @@ model ProviderService {
   id             String  @id @default(uuid())
   providerId     String
   provider       ProviderProfile @relation(fields: [providerId], references: [id])
-  serviceId      String
-  service        Service @relation(fields: [serviceId], references: [id])
+  serviceId      String?
+  service        Service? @relation(fields: [serviceId], references: [id])
+  categoryId     String?
+  category       Category? @relation(fields: [categoryId], references: [id])
+  name           String
+  description    String?
   priceCents     BigInt
   currency       String  @default("KES")
+  durationMin    Int     @default(60)
+  deliveryTypes  Json // array of ServiceDeliveryType strings
+  travelFeeCents BigInt?
+  images         Json? // array of { key, url }
   isActive       Boolean @default(true)
+  sortOrder      Int     @default(0)
+  bookingWindowDays Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
   bookings       Booking[]
-  @@unique([providerId, serviceId])
   @@index([providerId])
 }
 
