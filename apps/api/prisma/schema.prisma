@@ -239,13 +239,14 @@ model ProviderDocument {
 // ---------------------------------------------------------------------------
 
 model Category {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  name      String
-  parentId  String?
-  parent    Category? @relation("CategoryTree", fields: [parentId], references: [id])
-  children  Category[] @relation("CategoryTree")
-  services  Service[]
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  name        String
+  description String?
+  parentId    String?
+  parent      Category? @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryTree")
+  services    Service[]
   products  Product[]
   providerCategories ProviderCategory[]
   providerServices   ProviderService[]

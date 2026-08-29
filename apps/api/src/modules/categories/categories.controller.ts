@@ -9,8 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { Auth } from '../auth/guards/auth.decorator';
-import { Role } from '../auth/roles.enum';
+import { Auth } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import {
   createCategorySchema,

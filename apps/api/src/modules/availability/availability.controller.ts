@@ -6,9 +6,8 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { Auth } from '../auth/guards/auth.decorator';
-import { Authenticated, CurrentUser } from '../auth/guards/current-user.decorator';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { ProvidersService } from '../providers/providers.service';
 import {
   listSlotsSchema,
@@ -25,7 +24,7 @@ export class AvailabilityController {
 
   @Auth()
   @Get('providers/me/availability')
-  async getMine(@CurrentUser() user: Authenticated) {
+  async getMine(@CurrentUser() user: { sub: string }) {
     const profile = await this.providers.getOwnProfile(user.sub);
     if (!profile) return { rules: [], exceptions: [] };
     return this.availability.getAvailability(profile.id);
@@ -34,7 +33,7 @@ export class AvailabilityController {
   @Auth()
   @Put('providers/me/availability')
   async setMine(
-    @CurrentUser() user: Authenticated,
+    @CurrentUser() user: { sub: string },
     @Body(new ZodValidationPipe(updateAvailabilitySchema)) body: any,
   ) {
     const profile = await this.providers.getOwnProfile(user.sub);
