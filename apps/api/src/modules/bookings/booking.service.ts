@@ -337,8 +337,9 @@ export class BookingService {
 
   private bookingInclude() {
     return {
-      providerService: { select: { name: true, durationMin: true } },
-      provider: { select: { id: true, businessName: true, slug: true } },
+      providerService: {
+        include: { provider: { select: { id: true, businessName: true, slug: true } } },
+      },
       history: { orderBy: { createdAt: 'asc' } },
     };
   }
@@ -367,7 +368,7 @@ export class BookingService {
       cancelledAt: b.cancelledAt,
       cancelFeeCents: b.cancelFeeCents != null ? b.cancelFeeCents.toString() : null,
       service: { id: b.providerServiceId, name: b.providerService?.name ?? null },
-      provider: b.provider,
+      provider: b.providerService?.provider ?? null,
       history: (b.history ?? []).map((h: any) => ({
         from: h.from,
         to: h.to,
