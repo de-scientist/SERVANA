@@ -258,7 +258,7 @@ export class PaymentService {
         const p = await tx.payment.findUnique({ where: { id: paymentId } });
         if (!p || p.status !== 'SUCCESSFUL') throw new BadRequestException('Payment not refundable');
 
-        await tx.payment.update({ where: { id: paymentId }, data: { status: 'REFUNDED', paymentStatus: 'REFUNDED' } });
+        await tx.payment.update({ where: { id: paymentId }, data: { status: 'REFUNDED' } });
         await tx.refund.create({
           data: { paymentId, amountCents: p.grossCents, reason: reason ?? 'Refund requested' },
         });
