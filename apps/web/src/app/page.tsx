@@ -15,10 +15,10 @@ export default function HomePage() {
       </section>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link
-          href="/login"
+          href="/providers"
           className="inline-flex h-11 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:opacity-90"
         >
-          Sign in
+          Explore providers
         </Link>
         <Link
           href="/register"
@@ -27,10 +27,10 @@ export default function HomePage() {
           Create account
         </Link>
         <Link
-          href="/forgot-password"
+          href="/login"
           className="inline-flex h-11 items-center rounded-md px-4 text-sm font-medium text-primary hover:underline"
         >
-          Forgot password?
+          Sign in
         </Link>
       </div>
     </main>
