@@ -5,7 +5,7 @@ ADD COLUMN     "cancelledById" TEXT,
 ADD COLUMN     "cancelledByRole" TEXT,
 ADD COLUMN     "notes" TEXT,
 ADD COLUMN     "reference" TEXT NOT NULL,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL,
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ALTER COLUMN "serviceId" DROP NOT NULL;
 
 -- AlterTable
@@ -28,5 +28,3 @@ CREATE INDEX "Booking_startsAt_idx" ON "Booking"("startsAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Booking_providerId_startsAt_key" ON "Booking"("providerId", "startsAt");
-
-
