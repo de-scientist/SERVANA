@@ -431,6 +431,55 @@ export class ProvidersService {
     return this.mapPublicProfile(profile);
   }
 
+  async getPublicService(id: string) {
+    const service = await this.prisma.providerService.findUnique({
+      where: { id },
+      include: {
+        provider: {
+          include: {
+            categories: { include: { category: true } },
+            verification: { select: { status: true, level: true } },
+            user: { select: { name: true, profileImage: true } },
+          },
+        },
+      },
+    });
+    if (!service) throw new NotFoundException('Service not found');
+    if (service.provider.status !== ProviderStatus.VERIFIED) {
+      throw new NotFoundException('Service not found');
+    }
+    const p = service.provider;
+    return {
+      id: service.id,
+      name: service.name,
+      description: service.description,
+      categoryId: service.categoryId,
+      durationMin: service.durationMin,
+      bufferMin: service.bufferMin,
+      bookingWindowDays: service.bookingWindowDays,
+      deliveryTypes: service.deliveryTypes,
+      images: service.images,
+      isActive: service.isActive,
+      ...this.moneyFields(service),
+      provider: {
+        id: p.id,
+        businessName: p.businessName,
+        slug: p.slug,
+        city: p.city,
+        country: p.country,
+        travelToCustomer: p.travelToCustomer,
+        serviceRadiusKm: p.serviceRadiusKm,
+        yearsExperience: p.yearsExperience,
+        languages: p.languages,
+        categories: p.categories.map((c) => c.category),
+        ownerName: p.user.name,
+        ownerImage: p.user.profileImage,
+        verified: p.verification?.status === 'VERIFIED',
+        verificationLevel: p.verification?.level ?? null,
+      },
+    };
+  }
+
   // --- admin management ---------------------------------------------------
 
   async listAllProviders(filters: { status?: string; q?: string; page: number; pageSize: number }) {
