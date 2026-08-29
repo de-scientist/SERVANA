@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  FileInterceptor,
   Get,
   Param,
   Post,
@@ -10,6 +9,7 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Request as ExpressRequest } from 'express';
 import { VerificationService } from './verification.service';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';

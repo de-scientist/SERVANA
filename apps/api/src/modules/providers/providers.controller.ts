@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  FileInterceptor,
   Get,
   Param,
   Patch,
@@ -12,6 +11,7 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ProvidersService } from './providers.service';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
