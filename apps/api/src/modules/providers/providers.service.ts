@@ -42,15 +42,6 @@ export class ProvidersService {
     return profile;
   }
 
-  private async assertOwner(profileId: string, userId: string): Promise<void> {
-    const profile = await this.prisma.providerProfile.findUnique({
-      where: { id: profileId },
-      select: { userId: true },
-    });
-    if (!profile) throw new NotFoundException('Provider profile not found');
-    if (profile.userId !== userId) throw new ForbiddenException('You do not own this provider profile');
-  }
-
   // --- profile -------------------------------------------------------------
 
   async createProfile(userId: string, dto: CreateProviderProfileInput) {
