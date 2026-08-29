@@ -16,6 +16,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
 import { SearchModule } from './modules/search/search.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { PaymentModule } from './common/adapters/payment/payment.module';
 import { AiModule } from './common/adapters/ai/ai.module';
 import { NotificationModule } from './common/adapters/notification/notification.module';
@@ -41,6 +42,7 @@ import { LoggingModule } from './common/logging/logging.module';
     AvailabilityModule,
     SearchModule,
     BookingsModule,
+    PaymentsModule,
     PaymentModule,
     AiModule,
     NotificationModule,
