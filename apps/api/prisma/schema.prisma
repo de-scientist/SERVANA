@@ -221,21 +221,6 @@ enum VerificationLevel {
   TRUSTED_PROVIDER
 }
 
-model ProviderVerificationHistory {
-  id            String            @id @default(uuid())
-  providerId    String
-  provider      ProviderProfile   @relation(fields: [providerId], references: [id])
-  verificationId String
-  verification  ProviderVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
-  fromStatus    VerificationStatus?
-  toStatus      VerificationStatus
-  actorId       String?
-  note          String?
-  createdAt     DateTime          @default(now())
-  @@index([providerId])
-  @@index([verificationId])
-}
-
 model ProviderDocument {
   id           String          @id @default(uuid())
   providerId   String
