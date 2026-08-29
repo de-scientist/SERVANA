@@ -187,6 +187,7 @@ describe('Phase 4 · search, categories & availability (integration)', () => {
     await call('POST', `/admin/verifications/${profile!.id}/review`, admin.accessToken, { decision: 'APPROVE', level: 'PROFESSIONAL_VERIFIED' });
 
     const byQ = await call('GET', '/search?q=gel');
+    if (!byQ.body.services) console.error('SEARCH DEBUG', JSON.stringify(byQ.body));
     expect(byQ.body.services.length).toBe(1);
     expect(byQ.body.services[0].name).toBe('Gel Manicure');
 
