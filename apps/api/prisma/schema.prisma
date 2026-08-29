@@ -430,6 +430,7 @@ model Payment {
   currency        String   @default("KES")
   status          PaymentStatus
   provider        String
+  method          String   @default("OTHER")
   providerRef     String?
   idempotencyKey  String   @unique
   grossCents      BigInt
@@ -438,7 +439,11 @@ model Payment {
   feeCents        BigInt   @default(0)
   commissionCents BigInt   @default(0)
   netCents        BigInt
+  expiresAt       DateTime?
+  metadata        Json?
+  webhookRaw      Json?
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   transactions    PaymentTransaction[]
   refunds         Refund[]
   booking         Booking? @relation(fields: [bookingId], references: [id])
