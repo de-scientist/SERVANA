@@ -27,7 +27,6 @@ import {
 export class VerificationController {
   constructor(
     private readonly verification: VerificationService,
-    private readonly audit: AuditService,
   ) {}
 
   // --- provider self-service ----------------------------------------------
