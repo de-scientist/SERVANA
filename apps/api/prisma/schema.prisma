@@ -247,6 +247,8 @@ model Category {
   children  Category[] @relation("CategoryTree")
   services  Service[]
   products  Product[]
+  providerCategories ProviderCategory[]
+  providerServices   ProviderService[]
 }
 
 model Service {
