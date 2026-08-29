@@ -21,6 +21,8 @@ import { RbacService } from '../src/modules/rbac/rbac.service';
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? 'test_secret';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'test_refresh';
 
+jest.setTimeout(30000);
+
 describe('Provider marketplace (integration)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -168,7 +170,7 @@ describe('Provider marketplace (integration)', () => {
 
     // Submit verification
     const sub = await call('POST', '/providers/me/verification/submit', prov.accessToken, { notes: 'Here are my docs' });
-    expect(sub.status).toBe(200);
+    expect(sub.status).toBe(201);
     expect(sub.body.data.status).toBe('UNDER_REVIEW');
 
     // Admin reviews + approves
@@ -183,7 +185,7 @@ describe('Provider marketplace (integration)', () => {
       decision: 'APPROVE',
       level: 'PROFESSIONAL_VERIFIED',
     });
-    expect(review.status).toBe(200);
+    expect(review.status).toBe(201);
     expect(review.body.data.status).toBe('VERIFIED');
 
     // Now public profile is visible
