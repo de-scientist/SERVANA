@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { fetchService, formatPrice } from '@/lib/server-api';
 import AvailabilityPicker from '@/components/AvailabilityPicker';
+import BookServicePanel from '@/components/BookServicePanel';
 
 interface PageProps {
   params: { id: string };
@@ -89,19 +90,13 @@ export default async function ServicePage({ params }: PageProps) {
 
         <aside className="lg:col-span-1">
           <div className="sticky top-6 rounded-lg border bg-card p-5 shadow-soft">
-            <p className="text-2xl font-bold">{formatPrice(s.price, s.currency)}</p>
-            {s.travelFee != null && (
-              <p className="mt-1 text-sm text-muted-foreground">+ travel {formatPrice(s.travelFee, s.currency)}</p>
-            )}
-            <Link
-              href="#"
-              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              Book (coming soon)
-            </Link>
-            <p className="mt-2 text-center text-xs text-muted-foreground">
-              Booking engine launches next. Slots above are generated dynamically.
-            </p>
+            <BookServicePanel
+              serviceId={s.id}
+              slug={s.provider.slug}
+              deliveryTypes={s.deliveryTypes}
+              priceLabel={formatPrice(s.price, s.currency)}
+              providerCity={s.provider.city}
+            />
 
             <dl className="mt-5 space-y-2 border-t pt-4 text-sm">
               <div className="flex justify-between">
