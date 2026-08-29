@@ -187,4 +187,25 @@ export class AvailabilityService {
     return slots;
   }
 
+  async isOpenOn(providerId: string, date: string): Promise<boolean> {
+    const day = this.parseUtcDate(date);
+    const dow = day.getUTCDay();
+    const ex = await this.prisma.availabilityException.findFirst({
+      where: { providerId, date: day },
+    });
+    if (ex && (ex.type === 'TIME_OFF' || ex.type === 'HOLIDAY')) return false;
+    const rule = await this.prisma.availabilityRule.findFirst({
+      where: { providerId, dayOfWeek: dow },
+    });
+    return !!rule;
+  }
+
   private parseUtcDate(s: string): Date {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  }
+
+  private formatUtcDate(d: Date): string {
+    return d.toISOString().slice(0, 10);
+  }
+}
