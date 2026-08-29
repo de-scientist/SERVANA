@@ -12,6 +12,9 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { VerificationModule } from './modules/verification/verification.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { AvailabilityModule } from './modules/availability/availability.module';
+import { SearchModule } from './modules/search/search.module';
 import { PaymentModule } from './common/adapters/payment/payment.module';
 import { AiModule } from './common/adapters/ai/ai.module';
 import { NotificationModule } from './common/adapters/notification/notification.module';
@@ -33,6 +36,9 @@ import { LoggingModule } from './common/logging/logging.module';
     AdminModule,
     ProvidersModule,
     VerificationModule,
+    CategoriesModule,
+    AvailabilityModule,
+    SearchModule,
     PaymentModule,
     AiModule,
     NotificationModule,
