@@ -9,9 +9,9 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { Auth } from '../../auth/guards/auth.decorator';
-import { Role } from '../../auth/roles.enum';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { Auth } from '../auth/guards/auth.decorator';
+import { Role } from '../auth/roles.enum';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import {
   createCategorySchema,
   updateCategorySchema,

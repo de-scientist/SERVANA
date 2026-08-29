@@ -6,8 +6,8 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { Auth } from '../../auth/guards/auth.decorator';
-import { Authenticated, CurrentUser } from '../../auth/guards/current-user.decorator';
+import { Auth } from '../auth/guards/auth.decorator';
+import { Authenticated, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { ProvidersService } from '../providers/providers.service';
 import {

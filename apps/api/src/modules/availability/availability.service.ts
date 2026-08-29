@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../common/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { ProvidersService } from '../providers/providers.service';
 import { UpdateAvailabilityInput } from './dto/availability.schema';
 
@@ -73,7 +73,7 @@ export class AvailabilityService {
     date: string,
     days = 1,
   ): Promise<DaySlots[]> {
-    const provider = await this.providers.getPublicProfileBySlug(slug);
+    const provider = await this.providers.getPublicProfile(slug);
     if (!provider) throw new NotFoundException('Provider not found');
     return this.generateSlots(provider.id, serviceId, date, days);
   }
