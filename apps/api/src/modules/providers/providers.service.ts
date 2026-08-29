@@ -197,7 +197,7 @@ export class ProvidersService {
         priceCents: toMinorUnits(dto.price),
         currency: dto.currency,
         durationMin: dto.durationMin,
-        deliveryTypes: dto.deliveryTypes as Prisma.JsonValue,
+        deliveryTypes: dto.deliveryTypes as Prisma.InputJsonValue,
         travelFeeCents: dto.travelFee !== undefined ? toMinorUnits(dto.travelFee) : null,
         images: (dto.images as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         isActive: dto.isActive,
@@ -248,7 +248,7 @@ export class ProvidersService {
     if (dto.price !== undefined) data.priceCents = toMinorUnits(dto.price);
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.durationMin !== undefined) data.durationMin = dto.durationMin;
-    if (dto.deliveryTypes !== undefined) data.deliveryTypes = dto.deliveryTypes as Prisma.JsonValue;
+    if (dto.deliveryTypes !== undefined) data.deliveryTypes = dto.deliveryTypes as Prisma.InputJsonValue;
     if (dto.travelFee !== undefined) data.travelFeeCents = toMinorUnits(dto.travelFee);
     data.images = dto.images === undefined ? undefined : ((dto.images as Prisma.InputJsonValue) ?? Prisma.JsonNull);
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
