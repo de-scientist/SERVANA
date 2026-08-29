@@ -324,12 +324,12 @@ model AvailabilityRule {
 }
 
 model AvailabilityException {
-  id         String         @id @default(uuid())
+  id         String           @id @default(uuid())
   providerId String
-  provider   ProviderProfile @relation(fields: [providerId], references: [id])
+  provider   ProviderProfile  @relation(fields: [providerId], references: [id], onDelete: Cascade)
   date       DateTime
   type       ExceptionType
-  @@index([providerId, date])
+  note       String?
 }
 
 enum ExceptionType {
