@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Category } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { slugify, randomSuffix } from '../common/utils/slug';
+import { slugify, randomSuffix } from '../../common/utils/slug';
 import {
   CreateCategoryInput,
   UpdateCategoryInput,

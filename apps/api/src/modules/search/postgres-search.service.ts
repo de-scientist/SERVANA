@@ -84,11 +84,11 @@ export class PostgresSearchService implements SearchProvider {
         businessName: true,
         city: true,
         country: true,
-        avatarUrl: true,
         status: true,
         lat: true,
         lng: true,
-        providerCategories: {
+        user: { select: { profileImage: true } },
+        categories: {
           select: { category: { select: { id: true, name: true, slug: true } } },
         },
       },
@@ -100,11 +100,11 @@ export class PostgresSearchService implements SearchProvider {
       businessName: r.businessName,
       city: r.city,
       country: r.country,
-      avatarUrl: r.avatarUrl,
+      avatarUrl: r.user?.profileImage ?? null,
       verified: r.status === 'VERIFIED',
       lat: r.lat,
       lng: r.lng,
-      categories: r.providerCategories.map((pc) => pc.category),
+      categories: r.categories.map((pc) => pc.category),
     }));
   }
 
