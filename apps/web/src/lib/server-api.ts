@@ -115,8 +115,7 @@ export async function fetchService(id: string): Promise<PublicService | null> {
   try {
     const res = await fetch(`${API_URL}/api/v1/services/${encodeURIComponent(id)}`, { cache: 'no-store' });
     if (!res.ok) return null;
-    const json = (await res.json()) as { data: PublicService };
-    return json.data;
+    return (await res.json()) as PublicService;
   } catch {
     return null;
   }
