@@ -1,11 +1,9 @@
 import {
   Body,
   Controller,
-  Delete,
   FileInterceptor,
   Get,
   Param,
-  Patch,
   Post,
   Query,
   Req,
@@ -14,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
 import { VerificationService } from './verification.service';
-import { AuditService } from '../audit/audit.service';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {

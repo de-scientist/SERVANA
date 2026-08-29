@@ -9,11 +9,9 @@ import {
   Post,
   Put,
   Query,
-  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { Request as ExpressRequest } from 'express';
 import { ProvidersService } from './providers.service';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -40,14 +38,13 @@ import {
 export class ProvidersController {
   constructor(
     private readonly providers: ProvidersService,
-    private readonly audit: AuditService,
   ) {}
 
   // --- self-service (provider only) ---------------------------------------
 
   @Post('me')
   @Auth('PROVIDER')
-  async create(@CurrentUser() user: { sub: string }, @Body(new ZodValidationPipe(createProviderProfileSchema)) dto: CreateProviderProfileInput, @Req() req: ExpressRequest) {
+  async create(@CurrentUser() user: { sub: string }, @Body(new ZodValidationPipe(createProviderProfileSchema)) dto: CreateProviderProfileInput) {
     const result = await this.providers.createProfile(user.sub, dto);
     return { data: result };
   }
@@ -60,7 +57,7 @@ export class ProvidersController {
 
   @Patch('me')
   @Auth('PROVIDER')
-  async update(@CurrentUser() user: { sub: string }, @Body(new ZodValidationPipe(updateProviderProfileSchema)) dto: UpdateProviderProfileInput, @Req() req: ExpressRequest) {
+  async update(@CurrentUser() user: { sub: string }, @Body(new ZodValidationPipe(updateProviderProfileSchema)) dto: UpdateProviderProfileInput) {
     return { data: await this.providers.updateProfile(user.sub, dto) };
   }
 
