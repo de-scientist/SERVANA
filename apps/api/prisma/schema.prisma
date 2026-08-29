@@ -180,7 +180,6 @@ model ProviderVerification {
   reSubmittedAt DateTime?
   reviewedAt  DateTime?
   reviewedById String?
-  reviewedBy  User?             @relation(fields: [reviewedById], references: [id])
   reviewerNotes String?
   rejectionReason String?
   expiresAt   DateTime?
@@ -188,6 +187,20 @@ model ProviderVerification {
   verifiedAt  DateTime?
   history     ProviderVerificationHistory[]
   documents   ProviderDocument[]
+}
+
+model ProviderVerificationHistory {
+  id            String            @id @default(uuid())
+  providerId    String
+  verificationId String
+  verification  ProviderVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  fromStatus    VerificationStatus?
+  toStatus      VerificationStatus
+  actorId       String?
+  note          String?
+  createdAt     DateTime          @default(now())
+  @@index([providerId])
+  @@index([verificationId])
 }
 
 enum VerificationStatus {
