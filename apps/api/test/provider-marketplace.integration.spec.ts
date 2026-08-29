@@ -44,7 +44,7 @@ describe('Provider marketplace (integration)', () => {
   }
 
   async function register(role: 'CUSTOMER' | 'PROVIDER', email: string) {
-    const reg = await auth.register({ email, password: 'Passw0rd!23', name: 'Tester', phone: '+254700000000', role });
+    const reg = await auth.register({ email, password: 'Passw0rd!23', name: 'Tester', role });
     return reg.tokens;
   }
 
