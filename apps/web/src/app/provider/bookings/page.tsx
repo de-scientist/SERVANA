@@ -56,7 +56,7 @@ export default function ProviderBookingsPage() {
           setError(res.error.message);
           setItems([]);
         } else {
-          setItems((res.data as any)?.data ?? []);
+          setItems((res.data as any) ?? []);
         }
       })
       .finally(() => setLoading(false));
