@@ -229,7 +229,7 @@ describe('Phase 5 · booking engine (integration)', () => {
     // Strict policy: always 50% fee
     const user = await prisma.user.findUnique({ where: { email: provEmail } });
     const profile = await prisma.providerProfile.findFirst({ where: { userId: user!.id } });
-    await prisma.providerProfile.update({ where: { id: profile!.id }, data: { cancellationPolicy: { freeCancelHours: 0, feePercent: 50 } } });
+    await prisma.providerProfile.update({ where: { id: profile!.id }, data: { cancellationPolicy: { freeCancelHours: 999, feePercent: 50 } } });
 
     const startsAt = futureIso(2);
     const created = await call('POST', '/bookings', cust.accessToken, { providerServiceId: serviceId, startsAt, deliveryType: 'AT_PROVIDER_LOCATION' });
