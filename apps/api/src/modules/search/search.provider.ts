@@ -1,5 +1,3 @@
-import { ProviderProfile, ProviderService } from '@prisma/client';
-
 export interface SearchQuery {
   q?: string;
   categoryId?: string;

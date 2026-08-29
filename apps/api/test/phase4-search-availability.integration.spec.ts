@@ -273,6 +273,7 @@ describe('Phase 4 · search, categories & availability (integration)', () => {
       isActive: true,
     });
     const id = svc.body.data.id;
+    await verifyProvider(email);
     const res = await call('GET', `/services/${id}`);
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Skin Fade');
