@@ -32,7 +32,7 @@ export interface ServiceSearchHit {
   id: string;
   name: string;
   description: string | null;
-  priceCents: bigint;
+  priceCents: string;
   currency: string;
   durationMin: number;
   deliveryTypes: string[];

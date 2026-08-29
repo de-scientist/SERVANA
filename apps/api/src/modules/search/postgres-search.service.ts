@@ -157,7 +157,7 @@ export class PostgresSearchService implements SearchProvider {
       id: s.id,
       name: s.name,
       description: s.description,
-      priceCents: s.priceCents,
+      priceCents: s.priceCents.toString(),
       currency: s.currency,
       durationMin: s.durationMin,
       deliveryTypes: (Array.isArray(s.deliveryTypes)
