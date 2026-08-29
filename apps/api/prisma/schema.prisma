@@ -293,6 +293,7 @@ model ProviderService {
   priceCents     BigInt
   currency       String  @default("KES")
   durationMin    Int     @default(60)
+  bufferMin      Int     @default(0)
   deliveryTypes  Json // array of ServiceDeliveryType strings
   travelFeeCents BigInt?
   images         Json? // array of { key, url }
