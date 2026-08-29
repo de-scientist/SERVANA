@@ -237,8 +237,12 @@ export class ProvidersService {
     if (!existing) throw new NotFoundException('Service not found');
 
     const data: Prisma.ProviderServiceUpdateInput = {};
-    if (dto.serviceId !== undefined) data.serviceId = dto.serviceId;
-    if (dto.categoryId !== undefined) data.categoryId = dto.categoryId;
+    if (dto.serviceId !== undefined) {
+      data.service = dto.serviceId ? { connect: { id: dto.serviceId } } : { disconnect: true };
+    }
+    if (dto.categoryId !== undefined) {
+      data.category = dto.categoryId ? { connect: { id: dto.categoryId } } : { disconnect: true };
+    }
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.price !== undefined) data.priceCents = toMinorUnits(dto.price);

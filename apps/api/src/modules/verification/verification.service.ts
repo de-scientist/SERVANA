@@ -13,12 +13,11 @@ import { StorageProvider, STORAGE_PROVIDER } from '../../common/adapters/storage
 import { randomSuffix } from '../../common/utils/slug';
 import {
   DOCUMENT_KINDS,
-  ALLOWED_UPLOAD_TYPES,
-  MAX_UPLOAD_BYTES,
   SubmitVerificationInput,
   ReviewVerificationInput,
   ListVerificationsInput,
 } from './dto/verification.schema';
+import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from '../providers/dto/provider.schema';
 
 @Injectable()
 export class VerificationService {
