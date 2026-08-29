@@ -188,11 +188,3 @@ export class AvailabilityService {
   }
 
   private parseUtcDate(s: string): Date {
-    const [y, m, d] = s.split('-').map(Number);
-    return new Date(Date.UTC(y, m - 1, d));
-  }
-
-  private formatUtcDate(d: Date): string {
-    return d.toISOString().slice(0, 10);
-  }
-}
