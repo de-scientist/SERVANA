@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -32,7 +31,7 @@ export class CategoriesController {
     return this.categories.getBySlug(slug);
   }
 
-  @Auth(Role.ADMIN)
+  @Auth('ADMIN')
   @Post('admin/categories')
   async create(
     @Body(new ZodValidationPipe(createCategorySchema)) body: any,
@@ -40,7 +39,7 @@ export class CategoriesController {
     return this.categories.create(body);
   }
 
-  @Auth(Role.ADMIN)
+  @Auth('ADMIN')
   @Patch('admin/categories/:id')
   async update(
     @Param('id') id: string,
@@ -49,7 +48,7 @@ export class CategoriesController {
     return this.categories.update(id, body);
   }
 
-  @Auth(Role.ADMIN)
+  @Auth('ADMIN')
   @Delete('admin/categories/:id')
   async remove(@Param('id') id: string) {
     return this.categories.remove(id);
