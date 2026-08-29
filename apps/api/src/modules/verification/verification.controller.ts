@@ -5,12 +5,10 @@ import {
   Param,
   Post,
   Query,
-  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Request as ExpressRequest } from 'express';
 import { VerificationService } from './verification.service';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -76,7 +74,6 @@ export class VerificationController {
     @CurrentUser() actor: { sub: string },
     @Param('providerId') providerId: string,
     @Body(new ZodValidationPipe(reviewVerificationSchema)) dto: ReviewVerificationInput,
-    @Req() req: ExpressRequest,
   ) {
     const result = await this.verification.review(actor.sub, providerId, dto);
     return { data: result };

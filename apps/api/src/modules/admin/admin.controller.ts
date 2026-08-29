@@ -80,7 +80,6 @@ export class AdminController {
     @Param('id') id: string,
     @CurrentUser() actor: { sub: string },
     @Body(new ZodValidationPipe(setProviderStatusSchema)) dto: SetProviderStatusInput,
-    @Req() req: ExpressRequest,
   ) {
     const result = await this.providers.setProviderStatus(actor.sub, id, dto.status, dto.note);
     return result;
