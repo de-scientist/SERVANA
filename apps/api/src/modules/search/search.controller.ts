@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Query } from '@nestjs/common';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { searchSchema, SearchInput } from './dto/search.schema';
 import { SEARCH_PROVIDER, SearchProvider } from './search.provider';
 

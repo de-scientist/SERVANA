@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../common/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { AvailabilityService } from '../availability/availability.service';
 import {
   SearchProvider,
@@ -67,8 +67,8 @@ export class PostgresSearchService implements SearchProvider {
     if (query.categoryId) {
       where.OR = [
         ...(where.OR ?? []),
-        { providerCategories: { some: { categoryId: query.categoryId } } },
-        { providerServices: { some: { categoryId: query.categoryId } } },
+        { categories: { some: { categoryId: query.categoryId } } },
+        { services: { some: { categoryId: query.categoryId } } },
       ];
     }
     if (query.availableOn) {
