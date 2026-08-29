@@ -15,8 +15,7 @@ import {
 } from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
 import { ProvidersService } from './providers.service';
-import { AuditService } from '../audit/audit.service';
-import { Auth, Authenticated, CurrentUser } from '../auth/guards/current-user.decorator';
+import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {
   createProviderProfileSchema,
