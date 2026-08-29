@@ -14,7 +14,6 @@ import {
   TERMINAL_STATUSES,
 } from './booking.state';
 import {
-  BookingActionInput,
   CancelBookingInput,
   CreateBookingInput,
   ListBookingsInput,
@@ -198,7 +197,7 @@ export class BookingService {
     if (b.providerId !== profile.id) throw new ForbiddenException('Not your booking');
     assertTransition(b.status, to);
 
-    const updated = await this.prisma.booking.update({
+    await this.prisma.booking.update({
       where: { id },
       data: { status: to },
     });
@@ -246,7 +245,7 @@ export class BookingService {
         ? 0
         : Math.round(Number(b.priceCents) * ((policy.feePercent ?? 0) / 100));
 
-    const updated = await this.prisma.booking.update({
+    await this.prisma.booking.update({
       where: { id },
       data: {
         status: 'CANCELLED',
