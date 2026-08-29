@@ -5,11 +5,12 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { PaymentGateway } from './payment.gateway';
 import { CommissionService } from './commission.service';
 import { PaymentMethod, PaymentWebhookEvent } from '../../common/adapters/payment/payment.provider';
-import { BookingStatus, PaymentStatus } from '@prisma/client';
+import { BookingStatus } from '@prisma/client';
 
 export interface PaymentActor {
   sub: string;
@@ -110,7 +111,7 @@ export class PaymentService {
 
     return this.prisma.$transaction(
       async (tx) => {
-        const payment = await tx.payment.findUnique({ where: { providerRef: event.providerRef } });
+        const payment = await tx.payment.findFirst({ where: { providerRef: event.providerRef } });
         if (!payment) return { ok: true, ignored: true };
 
         // Idempotency: a payment already captured must not be processed again.
@@ -130,7 +131,7 @@ export class PaymentService {
 
         // SUCCESSFUL
         if (payment.expiresAt && new Date() > payment.expiresAt) {
-          await tx.payment.update({ where: { id: payment.id }, data: { status: 'EXPIRED', webhookRaw: event as any } });
+          await tx.payment.update({ where: { id: payment.id }, data: { status: 'CANCELLED', webhookRaw: event as any } });
           await this.setBookingStatus(payment.bookingId!, 'EXPIRED', null, 'SYSTEM', 'Payment expired');
           return { ok: true, expired: true };
         }
@@ -159,7 +160,6 @@ export class PaymentService {
           where: { id: payment.id },
           data: {
             status: 'SUCCESSFUL',
-            paymentStatus: 'SUCCESSFUL' as PaymentStatus,
             commissionCents: calc.commissionCents,
             netCents,
             webhookRaw: event as any,

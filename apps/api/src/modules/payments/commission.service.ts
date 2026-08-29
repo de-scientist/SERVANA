@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma, PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 export interface CommissionResult {
   rateBasisPoints: number;
