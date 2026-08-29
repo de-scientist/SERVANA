@@ -212,6 +212,11 @@ describe('Phase 5 · booking engine (integration)', () => {
     expect(confirm.status).toBe(200);
     expect(confirm.body.status).toBe('CONFIRMED');
 
+    // Provider starts
+    const start = await call('PATCH', `/bookings/provider/${id}/start`, prov.accessToken);
+    expect(start.status).toBe(200);
+    expect(start.body.status).toBe('IN_PROGRESS');
+
     // Provider completes
     const complete = await call('PATCH', `/bookings/provider/${id}/complete`, prov.accessToken);
     expect(complete.status).toBe(200);
