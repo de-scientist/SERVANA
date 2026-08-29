@@ -336,7 +336,7 @@ export class BookingService {
     return `SVN-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
   }
 
-  private bookingInclude() {
+  private bookingInclude(): Prisma.BookingInclude {
     return {
       providerService: {
         include: { provider: { select: { id: true, businessName: true, slug: true } } },
