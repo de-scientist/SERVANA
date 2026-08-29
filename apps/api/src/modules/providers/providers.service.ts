@@ -436,6 +436,77 @@ export class ProvidersService {
     return this.mapPublicProfile(profile);
   }
 
+  // --- admin management ---------------------------------------------------
+
+  async listAllProviders(filters: { status?: string; q?: string; page: number; pageSize: number }) {
+    const where: Prisma.ProviderProfileWhereInput = {};
+    if (filters.status) where.status = filters.status as ProviderStatus;
+    if (filters.q) {
+      where.OR = [
+        { businessName: { contains: filters.q, mode: 'insensitive' } },
+        { slug: { contains: filters.q, mode: 'insensitive' } },
+      ];
+    }
+    const [rows, total] = await Promise.all([
+      this.prisma.providerProfile.findMany({
+        where,
+        include: {
+          user: { select: { email: true } },
+          verification: { select: { status: true, level: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (filters.page - 1) * filters.pageSize,
+        take: filters.pageSize,
+      }),
+      this.prisma.providerProfile.count({ where }),
+    ]);
+    return {
+      data: rows.map((p) => ({
+        id: p.id,
+        businessName: p.businessName,
+        slug: p.slug,
+        city: p.city,
+        country: p.country,
+        status: p.status,
+        email: p.user.email,
+        verificationStatus: p.verification?.status ?? null,
+        verificationLevel: p.verification?.level ?? null,
+        createdAt: p.createdAt,
+      })),
+      meta: { page: filters.page, pageSize: filters.pageSize, total, pages: Math.ceil(total / filters.pageSize) || 0 },
+    };
+  }
+
+  async getProviderAdmin(id: string) {
+    const profile = await this.prisma.providerProfile.findUnique({
+      where: { id },
+      include: {
+        user: { select: { name: true, email: true, phone: true } },
+        categories: { include: { category: true } },
+        services: { orderBy: { sortOrder: 'asc' } },
+        portfolio: { orderBy: { sortOrder: 'asc' } },
+        verification: { include: { history: { orderBy: { createdAt: 'desc' } }, documents: true } },
+      },
+    });
+    if (!profile) throw new NotFoundException('Provider profile not found');
+    return this.mapProfileDetail(profile);
+  }
+
+  async setProviderStatus(actorId: string, id: string, status: ProviderStatus, note?: string) {
+    const profile = await this.prisma.providerProfile.findUnique({ where: { id } });
+    if (!profile) throw new NotFoundException('Provider profile not found');
+    const updated = await this.prisma.providerProfile.update({ where: { id }, data: { status } });
+    await this.audit.record({
+      actorId,
+      action: 'admin.provider.status',
+      entity: 'provider',
+      entityId: id,
+      before: { status: profile.status },
+      after: { status: updated.status, note },
+    });
+    return { data: { id: updated.id, status: updated.status } };
+  }
+
   // --- mappers -------------------------------------------------------------
 
   private moneyFields(row: { priceCents: bigint; currency: string; travelFeeCents?: bigint | null }) {
