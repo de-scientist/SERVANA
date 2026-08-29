@@ -31,7 +31,7 @@ export class ProviderBookingsController {
   @Auth('PROVIDER')
   @Get(':id')
   async detail(@CurrentUser() user: { sub: string }, @Param('id') id: string) {
-    return this.booking.getForProvider({ sub: user.sub, role: 'PROVIDER' }, id);
+    return { data: await this.booking.getForProvider({ sub: user.sub, role: 'PROVIDER' }, id) };
   }
 
   @Auth('PROVIDER')
@@ -41,7 +41,7 @@ export class ProviderBookingsController {
     @Param('id') id: string,
     @Body(new ZodValidationPipe(bookingActionSchema)) body: any,
   ) {
-    return this.booking.confirm({ sub: user.sub, role: 'PROVIDER' }, id, body);
+    return { data: await this.booking.confirm({ sub: user.sub, role: 'PROVIDER' }, id, body) };
   }
 
   @Auth('PROVIDER')
@@ -51,19 +51,19 @@ export class ProviderBookingsController {
     @Param('id') id: string,
     @Body(new ZodValidationPipe(bookingActionSchema)) body: any,
   ) {
-    return this.booking.decline({ sub: user.sub, role: 'PROVIDER' }, id, body);
+    return { data: await this.booking.decline({ sub: user.sub, role: 'PROVIDER' }, id, body) };
   }
 
   @Auth('PROVIDER')
   @Patch(':id/start')
   async start(@CurrentUser() user: { sub: string }, @Param('id') id: string) {
-    return this.booking.start({ sub: user.sub, role: 'PROVIDER' }, id);
+    return { data: await this.booking.start({ sub: user.sub, role: 'PROVIDER' }, id) };
   }
 
   @Auth('PROVIDER')
   @Patch(':id/complete')
   async complete(@CurrentUser() user: { sub: string }, @Param('id') id: string) {
-    return this.booking.complete({ sub: user.sub, role: 'PROVIDER' }, id);
+    return { data: await this.booking.complete({ sub: user.sub, role: 'PROVIDER' }, id) };
   }
 
   @Auth('PROVIDER')
@@ -73,6 +73,6 @@ export class ProviderBookingsController {
     @Param('id') id: string,
     @Body(new ZodValidationPipe(cancelBookingSchema)) body: any,
   ) {
-    return this.booking.cancelAsProvider({ sub: user.sub, role: 'PROVIDER' }, id, body);
+    return { data: await this.booking.cancelAsProvider({ sub: user.sub, role: 'PROVIDER' }, id, body) };
   }
 }

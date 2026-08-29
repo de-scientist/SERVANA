@@ -26,7 +26,7 @@ export class CustomerBookingsController {
     @CurrentUser() user: { sub: string },
     @Body(new ZodValidationPipe(createBookingSchema)) body: any,
   ) {
-    return this.booking.create({ sub: user.sub, role: 'CUSTOMER' }, body);
+    return { data: await this.booking.create({ sub: user.sub, role: 'CUSTOMER' }, body) };
   }
 
   @Auth('CUSTOMER')
@@ -41,7 +41,7 @@ export class CustomerBookingsController {
   @Auth('CUSTOMER')
   @Get(':id')
   async detail(@CurrentUser() user: { sub: string }, @Param('id') id: string) {
-    return this.booking.getForCustomer({ sub: user.sub, role: 'CUSTOMER' }, id);
+    return { data: await this.booking.getForCustomer({ sub: user.sub, role: 'CUSTOMER' }, id) };
   }
 
   @Auth('CUSTOMER')
@@ -51,6 +51,6 @@ export class CustomerBookingsController {
     @Param('id') id: string,
     @Body(new ZodValidationPipe(cancelBookingSchema)) body: any,
   ) {
-    return this.booking.cancelAsCustomer({ sub: user.sub, role: 'CUSTOMER' }, id, body);
+    return { data: await this.booking.cancelAsCustomer({ sub: user.sub, role: 'CUSTOMER' }, id, body) };
   }
 }
