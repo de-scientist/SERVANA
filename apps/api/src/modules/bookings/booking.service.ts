@@ -221,7 +221,7 @@ export class BookingService {
   private async cancel(actor: BookingActor, id: string, by: 'CUSTOMER' | 'PROVIDER', reason?: string) {
     const b = await this.prisma.booking.findUnique({
       where: { id },
-      include: { provider: { select: { cancellationPolicy: true } } },
+      include: { providerService: { include: { provider: { select: { cancellationPolicy: true } } } } },
     });
     if (!b) throw new NotFoundException('Booking not found');
 
@@ -235,10 +235,11 @@ export class BookingService {
       throw new BadRequestException(`Cannot cancel a booking in status ${b.status}`);
     }
 
-    const policy: CancellationPolicy = (b.provider.cancellationPolicy as CancellationPolicy) ?? {
-      freeCancelHours: 24,
-      feePercent: 0,
-    };
+    const policy: CancellationPolicy =
+      (b.providerService?.provider?.cancellationPolicy as CancellationPolicy) ?? {
+        freeCancelHours: 24,
+        feePercent: 0,
+      };
     const hoursUntil = (b.startsAt.getTime() - Date.now()) / 3_600_000;
     const feeCents =
       hoursUntil >= (policy.freeCancelHours ?? 24)

@@ -8,7 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
-import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {
   bookingActionSchema,
   cancelBookingSchema,
