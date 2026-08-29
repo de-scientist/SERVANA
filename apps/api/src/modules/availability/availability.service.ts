@@ -108,6 +108,9 @@ export class AvailabilityService {
     const startDate = this.parseUtcDate(date);
     const lastDate = new Date(startDate);
     lastDate.setUTCDate(lastDate.getUTCDate() + Math.max(0, days - 1));
+    const dayEnd = new Date(lastDate);
+    dayEnd.setUTCHours(23, 59, 59, 999);
+
     const exceptions = await this.prisma.availabilityException.findMany({
       where: {
         providerId,
@@ -121,6 +124,16 @@ export class AvailabilityService {
       }
     }
 
+    const bookings = await this.prisma.booking.findMany({
+      where: {
+        providerId,
+        status: { notIn: ['CANCELLED', 'PROVIDER_REJECTED', 'EXPIRED', 'REFUNDED', 'DISPUTED'] },
+        startsAt: { lt: dayEnd },
+        endsAt: { gt: startDate },
+      },
+      select: { startsAt: true, endsAt: true },
+    });
+
     const result: DaySlots[] = [];
     for (let d = 0; d < days; d++) {
       const cur = new Date(startDate);
@@ -131,7 +144,7 @@ export class AvailabilityService {
         result.push({ date: dateStr, slots: [] });
         continue;
       }
-      const daySlots = this.slotsForDay(
+      let daySlots = this.slotsForDay(
         cur,
         dow,
         rulesByDay.get(dow),
@@ -139,6 +152,11 @@ export class AvailabilityService {
         buffer,
         windowDays,
       );
+      daySlots = daySlots.filter((iso) => {
+        const s = new Date(iso).getTime();
+        const e = s + duration * 60000;
+        return !bookings.some((b) => s < b.endsAt.getTime() && e > b.startsAt.getTime());
+      });
       result.push({ date: dateStr, slots: daySlots });
     }
     return result;
