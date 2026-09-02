@@ -185,11 +185,13 @@ describe('PaymentService', () => {
         id: 'b1', customerId: 'cust1', status: 'AWAITING_PAYMENT', priceCents: 200000n, currency: 'KES',
         providerService: { provider: { id: 'prov1', status: 'VERIFIED' } },
       });
-      prisma.payment.findUnique.mockResolvedValue({
+      const existingPayment = {
         id: 'pay_existing', status: 'PENDING', method: 'MPESA', provider: 'mpesa',
         providerRef: 'mpesa_ref_existing', grossCents: 200000n, commissionCents: 0n, netCents: 200000n,
         currency: 'KES', expiresAt: new Date(), createdAt: new Date(),
-      });
+      };
+      prisma.payment.findUnique.mockResolvedValue(existingPayment);
+      prisma.payment.findUniqueOrThrow.mockResolvedValue(existingPayment);
       const svc = service(prisma);
 
       const result = await svc.initiate({ sub: 'cust1', role: 'CUSTOMER' }, { bookingId: 'b1' });
@@ -237,7 +239,7 @@ describe('PaymentService', () => {
           payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm_default', type: 'MPESA', isDefault: true }), create: jest.fn() },
           payout: { upsert: jest.fn() },
           loyaltyTier: { upsert: jest.fn() },
-          loyaltyAccount: { upsert: jest.fn(), update: jest.fn() },
+          loyaltyAccount: { upsert: jest.fn().mockResolvedValue({ id: 'la1', customerId: 'cust1', balanceCents: 0n }), update: jest.fn() },
           loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() },
           bookingStatusHistory: { create: jest.fn() },
         };
@@ -449,7 +451,7 @@ describe('PaymentService', () => {
           payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm_default', type: 'MPESA', isDefault: true }), create: jest.fn() },
           payout: { upsert: jest.fn() },
           loyaltyTier: { upsert: jest.fn() },
-          loyaltyAccount: { upsert: jest.fn(), update: jest.fn() },
+          loyaltyAccount: { upsert: jest.fn().mockResolvedValue({ id: 'la1', customerId: 'cust1', balanceCents: 0n }), update: jest.fn() },
           loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() },
           bookingStatusHistory: { create: jest.fn() },
         };
@@ -497,7 +499,7 @@ describe('PaymentService', () => {
           payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm_default', type: 'MPESA', isDefault: true }), create: jest.fn() },
           payout: { upsert: jest.fn() },
           loyaltyTier: { upsert: jest.fn() },
-          loyaltyAccount: { upsert: jest.fn(), update: jest.fn() },
+          loyaltyAccount: { upsert: jest.fn().mockResolvedValue({ id: 'la1', customerId: 'cust1', balanceCents: 0n }), update: jest.fn() },
           loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() },
           bookingStatusHistory: { create: jest.fn() },
         };
@@ -542,7 +544,7 @@ describe('PaymentService', () => {
           payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm_default', type: 'MPESA', isDefault: true }), create: jest.fn() },
           payout: { upsert: jest.fn() },
           loyaltyTier: { upsert: jest.fn() },
-          loyaltyAccount: { upsert: jest.fn(), update: jest.fn() },
+          loyaltyAccount: { upsert: jest.fn().mockResolvedValue({ id: 'la1', customerId: 'cust1', balanceCents: 0n }), update: jest.fn() },
           loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue({ id: 'lt1' }), create: jest.fn() },
           bookingStatusHistory: { create: jest.fn() },
         };
@@ -565,6 +567,11 @@ describe('PaymentService', () => {
         id: 'pay1', bookingId: 'b1', customerId: 'cust1', status: 'SUCCESSFUL',
         grossCents: 200000n, currency: 'KES', provider: 'mpesa', providerRef: 'ref1',
         booking: { id: 'b1', status: 'PAID' },
+      });
+      prisma.payment.findUniqueOrThrow.mockResolvedValue({
+        id: 'pay1', bookingId: 'b1', customerId: 'cust1', status: 'REFUNDED',
+        grossCents: 200000n, commissionCents: 20000n, netCents: 180000n,
+        currency: 'KES', provider: 'mpesa', providerRef: 'ref1',
       });
       prisma.$transaction.mockImplementation(async (fn: any) => {
         const tx = {
@@ -634,7 +641,8 @@ describe('PaymentService', () => {
       });
       prisma.payment.findUniqueOrThrow.mockResolvedValue({
         id: 'pay1', customerId: 'cust1', status: 'REFUNDED',
-        grossCents: 200000n, currency: 'KES', provider: 'mpesa', providerRef: 'ref1',
+        grossCents: 200000n, commissionCents: 20000n, netCents: 180000n,
+        currency: 'KES', provider: 'mpesa', providerRef: 'ref1',
         booking: { id: 'b1', status: 'PAID' },
       });
       prisma.$transaction.mockImplementation(async (fn: any) => {
