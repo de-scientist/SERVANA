@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -7,6 +7,22 @@ export interface CommissionResult {
   fixedCents: bigint;
   commissionCents: bigint;
   ruleSnapshot: Array<{ id: string; scope: string; type: string; value: bigint; priority: number }>;
+}
+
+export interface CreateCommissionRuleInput {
+  scope: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+  priority?: number;
+  validFrom?: Date;
+  validTo?: Date | null;
+}
+
+export interface UpdateCommissionRuleInput {
+  type?: 'PERCENTAGE' | 'FIXED';
+  value?: number;
+  priority?: number;
+  validTo?: Date | null;
 }
 
 const STANDARD_RULE_ID = 'standard';
@@ -87,5 +103,106 @@ export class CommissionService {
     if (commission > grossCents) commission = grossCents;
 
     return { rateBasisPoints, fixedCents, commissionCents: commission, ruleSnapshot: snapshot };
+  }
+
+  // --- Rule management (admin) ---------------------------------------------
+
+  async listRules(): Promise<Array<{
+    id: string;
+    scope: string;
+    type: string;
+    value: string;
+    priority: number;
+    validFrom: Date;
+    validTo: Date | null;
+  }>> {
+    const rules = await this.prisma.commissionRule.findMany({ orderBy: [{ scope: 'asc' }, { priority: 'desc' }] });
+    return rules.map((r) => ({
+      id: r.id,
+      scope: r.scope,
+      type: r.type,
+      value: r.value.toString(),
+      priority: r.priority,
+      validFrom: r.validFrom,
+      validTo: r.validTo,
+    }));
+  }
+
+  async getRule(id: string) {
+    const rule = await this.prisma.commissionRule.findUnique({ where: { id } });
+    if (!rule) throw new NotFoundException(`Commission rule "${id}" not found`);
+    return {
+      ...rule,
+      value: rule.value.toString(),
+    };
+  }
+
+  async createRule(input: CreateCommissionRuleInput) {
+    const id = `${input.scope}_${Date.now().toString(36)}`;
+
+    if (input.type === 'PERCENTAGE' && (input.value < 0 || input.value > 10000)) {
+      throw new BadRequestException('Percentage value must be between 0 and 10000 basis points');
+    }
+    if (input.type === 'FIXED' && input.value < 0) {
+      throw new BadRequestException('Fixed value must be non-negative');
+    }
+
+    const existing = await this.prisma.commissionRule.findFirst({ where: { scope: input.scope } });
+    if (existing && input.scope === 'standard') {
+      throw new BadRequestException('A standard rule already exists. Update it instead.');
+    }
+
+    const rule = await this.prisma.commissionRule.create({
+      data: {
+        id,
+        scope: input.scope,
+        type: input.type,
+        value: BigInt(input.value),
+        priority: input.priority ?? 0,
+        validFrom: input.validFrom ?? new Date(),
+        validTo: input.validTo ?? null,
+      },
+    });
+
+    return { ...rule, value: rule.value.toString() };
+  }
+
+  async updateRule(id: string, input: UpdateCommissionRuleInput) {
+    if (id === STANDARD_RULE_ID) {
+      throw new BadRequestException('Cannot modify the standard rule. Create a scope-specific override instead.');
+    }
+
+    const existing = await this.prisma.commissionRule.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`Commission rule "${id}" not found`);
+
+    const data: Prisma.CommissionRuleUpdateInput = {};
+    if (input.type !== undefined) data.type = input.type;
+    if (input.value !== undefined) {
+      if (input.type === 'PERCENTAGE' || existing.type === 'PERCENTAGE') {
+        const pct = input.value ?? Number(existing.value);
+        if (pct < 0 || pct > 10000) {
+          throw new BadRequestException('Percentage value must be between 0 and 10000 basis points');
+        }
+      }
+      if (input.value < 0) {
+        throw new BadRequestException('Value must be non-negative');
+      }
+      data.value = BigInt(input.value);
+    }
+    if (input.priority !== undefined) data.priority = input.priority;
+    if (input.validTo !== undefined) data.validTo = input.validTo;
+
+    const rule = await this.prisma.commissionRule.update({ where: { id }, data });
+    return { ...rule, value: rule.value.toString() };
+  }
+
+  async deleteRule(id: string) {
+    if (id === STANDARD_RULE_ID) {
+      throw new BadRequestException('Cannot delete the standard rule');
+    }
+    const existing = await this.prisma.commissionRule.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`Commission rule "${id}" not found`);
+    await this.prisma.commissionRule.delete({ where: { id } });
+    return { deleted: true };
   }
 }
