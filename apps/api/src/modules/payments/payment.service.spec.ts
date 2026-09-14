@@ -249,7 +249,7 @@ describe('PaymentService', () => {
       const result: any = await svc.handleProviderEvent('mpesa', {
         providerRef: 'mpesa_ref_123',
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
 
@@ -264,7 +264,7 @@ describe('PaymentService', () => {
       const svc = service(prisma, gateway);
 
       const result = await svc.handleProviderEvent('unknown', {
-        providerRef: 'ref', status: 'SUCCESSFUL', amount: 100, currency: 'KES',
+        providerRef: 'ref', status: 'SUCCESSFUL', amount: '100', currency: 'KES',
       });
 
       expect(result.ok).toBe(false);
@@ -282,7 +282,7 @@ describe('PaymentService', () => {
       const svc = service(prisma, gateway);
 
       const result: any = await svc.handleProviderEvent('mpesa', {
-        providerRef: 'nonexistent', status: 'SUCCESSFUL', amount: 100, currency: 'KES',
+        providerRef: 'nonexistent', status: 'SUCCESSFUL', amount: '100', currency: 'KES',
       });
 
       expect(result.ok).toBe(true);
@@ -305,7 +305,7 @@ describe('PaymentService', () => {
       const svc = service(prisma, gateway);
 
       const result: any = await svc.handleProviderEvent('mpesa', {
-        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: 200000, currency: 'KES',
+        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: '200000', currency: 'KES',
       });
 
       expect(result.ok).toBe(true);
@@ -331,7 +331,7 @@ describe('PaymentService', () => {
       const svc = service(prisma, gateway);
 
       const result: any = await svc.handleProviderEvent('mpesa', {
-        providerRef: 'mpesa_ref_123', status: 'FAILED', amount: 200000, currency: 'KES',
+        providerRef: 'mpesa_ref_123', status: 'FAILED', amount: '200000', currency: 'KES',
       });
 
       expect(result.ok).toBe(true);
@@ -358,7 +358,7 @@ describe('PaymentService', () => {
       const svc = service(prisma, gateway);
 
       const result: any = await svc.handleProviderEvent('mpesa', {
-        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: 100000, currency: 'KES',
+        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: '100000', currency: 'KES',
       });
 
       expect(result.ok).toBe(true);
@@ -385,7 +385,7 @@ describe('PaymentService', () => {
       const svc = service(prisma, gateway);
 
       const result: any = await svc.handleProviderEvent('mpesa', {
-        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: 200000, currency: 'USD',
+        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: '200000', currency: 'USD',
       });
 
       expect(result.ok).toBe(true);
@@ -415,7 +415,7 @@ describe('PaymentService', () => {
       const svc = service(prisma, gateway);
 
       const result: any = await svc.handleProviderEvent('mpesa', {
-        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: 200000, currency: 'KES',
+        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: '200000', currency: 'KES',
       });
 
       expect(result.ok).toBe(true);
@@ -459,7 +459,7 @@ describe('PaymentService', () => {
       });
 
       await svc.handleProviderEvent('mpesa', {
-        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: 200000, currency: 'KES',
+        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: '200000', currency: 'KES',
       });
 
       expect(capturedTx.paymentTransaction.create).toHaveBeenCalledWith(
@@ -507,7 +507,7 @@ describe('PaymentService', () => {
       });
 
       await svc.handleProviderEvent('mpesa', {
-        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: 200000, currency: 'KES',
+        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: '200000', currency: 'KES',
       });
 
       expect(capturedTx.loyaltyTransaction.create).toHaveBeenCalledWith(
@@ -552,7 +552,7 @@ describe('PaymentService', () => {
       });
 
       await svc.handleProviderEvent('mpesa', {
-        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: 200000, currency: 'KES',
+        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: '200000', currency: 'KES',
       });
 
       expect(capturedTx.loyaltyTransaction.create).not.toHaveBeenCalled();
