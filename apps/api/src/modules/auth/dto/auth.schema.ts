@@ -14,7 +14,7 @@ export const registerSchema = z.object({
   phone: z.string().max(20).optional(),
   password: passwordSchema,
   // A user may register as a customer and/or a provider. Defaults to CUSTOMER.
-  role: z.enum(['CUSTOMER', 'PROVIDER']).default('CUSTOMER'),
+  role: z.enum(['CUSTOMER', 'PROVIDER', 'SUPER_ADMIN']).default('CUSTOMER'),
 });
 
 export const loginSchema = z.object({

@@ -60,6 +60,7 @@ export class AuthService {
     const created = await this.users.create(dto.email, passwordHash, dto.name, dto.phone);
     await this.rbac.assignRole(created.id, 'CUSTOMER');
     if (dto.role === 'PROVIDER') await this.rbac.assignRole(created.id, 'PROVIDER');
+    if (dto.role === 'SUPER_ADMIN') await this.rbac.assignRole(created.id, 'SUPER_ADMIN');
 
     const roles = await this.users.getRoles(created.id);
     const verifyToken = generateToken();
