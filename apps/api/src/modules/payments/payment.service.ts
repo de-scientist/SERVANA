@@ -137,7 +137,7 @@ export class PaymentService {
         }
 
         // Never trust the provider amount — compare to our server-side gross.
-        if (event.amount !== Number(payment.grossCents) || event.currency !== payment.currency) {
+        if (event.amount !== payment.grossCents.toString() || event.currency !== payment.currency) {
           await tx.payment.update({ where: { id: payment.id }, data: { status: 'FAILED', webhookRaw: event as any } });
           await tx.booking.update({ where: { id: payment.bookingId! }, data: { paymentStatus: 'FAILED' } });
           await this.setBookingStatus(payment.bookingId!, 'PENDING', null, 'SYSTEM', 'Payment amount mismatch');

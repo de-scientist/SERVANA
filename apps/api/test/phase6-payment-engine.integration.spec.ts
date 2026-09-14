@@ -86,8 +86,8 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
     await call('POST', `/admin/verifications/${profile!.id}/review`, admin.accessToken, { decision: 'APPROVE', level: 'PROFESSIONAL_VERIFIED' });
   }
 
-  async function call(method: string, path: string, token?: string, body?: unknown) {
-    const headers: Record<string, string> = {};
+  async function call(method: string, path: string, token?: string, body?: unknown, extraHeaders?: Record<string, string>) {
+    const headers: Record<string, string> = { ...extraHeaders };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const init: RequestInit = { method, headers };
     if (body !== undefined) {
@@ -97,6 +97,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
     const res = await fetch(base + '/api/v1' + path, init);
     const json = await res.json().catch(() => ({}));
     return { status: res.status, body: json };
+  }
+
+  async function webhook(providerId: string, event: any) {
+    return call('POST', `/payments/webhook/${providerId}`, undefined, event, { 'x-pay-signature': 'test-signature' });
   }
 
   async function setupVerifiedProvider(email: string) {
@@ -265,10 +269,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId });
       const providerRef = payRes.body.data.providerRef;
 
-      const webhook = await call('POST', '/payments/webhook/mpesa', undefined, {
+      const webhook = await webhook('mpesa', {
         providerRef,
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
       expect(webhook.status).toBe(200);
@@ -295,17 +299,17 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
       const providerRef = payRes.body.data.providerRef;
 
-      await call('POST', '/payments/webhook/mpesa', undefined, {
+      await webhook('mpesa', {
         providerRef,
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
 
-      const duplicate = await call('POST', '/payments/webhook/mpesa', undefined, {
+      const duplicate = await webhook('mpesa', {
         providerRef,
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
       expect(duplicate.body.ok).toBe(true);
@@ -325,10 +329,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
       const providerRef = payRes.body.data.providerRef;
 
-      const webhook = await call('POST', '/payments/webhook/mpesa', undefined, {
+      const webhook = await webhook('mpesa', {
         providerRef,
         status: 'SUCCESSFUL',
-        amount: 100000,
+        amount: '100000',
         currency: 'KES',
       });
       expect(webhook.body.amountMismatch).toBe(true);
@@ -350,10 +354,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
       const providerRef = payRes.body.data.providerRef;
 
-      const webhook = await call('POST', '/payments/webhook/mpesa', undefined, {
+      const webhook = await webhook('mpesa', {
         providerRef,
         status: 'FAILED',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
       expect(webhook.body.ok).toBe(true);
@@ -364,10 +368,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
     });
 
     it('rejects unknown provider webhook', async () => {
-      const webhook = await call('POST', '/payments/webhook/unknown_psp', undefined, {
+      const webhook = await webhook('unknown_psp', {
         providerRef: 'ref',
         status: 'SUCCESSFUL',
-        amount: 100,
+        amount: '100',
         currency: 'KES',
       });
       expect(webhook.body.ok).toBe(false);

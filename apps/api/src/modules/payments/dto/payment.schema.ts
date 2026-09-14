@@ -14,7 +14,7 @@ export type RefundPaymentInputDto = z.infer<typeof refundPaymentSchema>;
 export const webhookEventSchema = z.object({
   providerRef: z.string(),
   status: z.enum(['PENDING', 'SUCCESSFUL', 'FAILED']),
-  amount: z.number(),
+  amount: z.string(),
   currency: z.string(),
   transactionId: z.string().optional(),
 });

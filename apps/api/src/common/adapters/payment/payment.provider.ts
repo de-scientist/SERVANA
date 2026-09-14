@@ -26,7 +26,7 @@ export interface PaymentRefundRequest {
 export interface PaymentWebhookEvent {
   providerRef: string;
   status: 'PENDING' | 'SUCCESSFUL' | 'FAILED';
-  amount: number;
+  amount: string;
   currency: string;
   transactionId?: string;
 }

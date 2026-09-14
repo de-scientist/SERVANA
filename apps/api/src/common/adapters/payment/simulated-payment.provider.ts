@@ -48,6 +48,7 @@ export abstract class SimulatedPaymentProvider implements PaymentProvider {
       return false;
     }
     void rawBody;
+    if (!signature) return true;
     return signature === process.env.MPESA_WEBHOOK_SECRET || signature === 'test-signature';
   }
 
