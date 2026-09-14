@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   Post,
-  Query,
 } from '@nestjs/common';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
