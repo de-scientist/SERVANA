@@ -391,10 +391,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
 
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
 
-      await call('POST', '/payments/webhook/mpesa', undefined, {
+      await webhook('mpesa', {
         providerRef: payRes.body.data.providerRef,
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
 
@@ -419,10 +419,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
 
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
 
-      await call('POST', '/payments/webhook/mpesa', undefined, {
+      await webhook('mpesa', {
         providerRef: payRes.body.data.providerRef,
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
 
@@ -448,10 +448,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
 
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
 
-      await call('POST', '/payments/webhook/mpesa', undefined, {
+      await webhook('mpesa', {
         providerRef: payRes.body.data.providerRef,
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
 
@@ -475,10 +475,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
 
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
 
-      await call('POST', '/payments/webhook/mpesa', undefined, {
+      await webhook('mpesa', {
         providerRef: payRes.body.data.providerRef,
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
 
@@ -504,10 +504,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
 
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
 
-      await call('POST', '/payments/webhook/mpesa', undefined, {
+      await webhook('mpesa', {
         providerRef: payRes.body.data.providerRef,
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
 
@@ -564,10 +564,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
 
       const payRes = await call('POST', '/payments', cust1.accessToken, { bookingId: booking.body.data.id });
 
-      await call('POST', '/payments/webhook/mpesa', undefined, {
+      await webhook('mpesa', {
         providerRef: payRes.body.data.providerRef,
         status: 'SUCCESSFUL',
-        amount: 200000,
+        amount: '200000',
         currency: 'KES',
       });
 
