@@ -69,7 +69,7 @@ export class PayoutService {
       throw new ForbiddenException('Cannot view another provider\'s earnings');
     }
 
-    const [earnings, payouts, payments] = await Promise.all([
+    const [earnings, payouts] = await Promise.all([
       this.prisma.providerEarning.findMany({
         where: { providerId: targetProviderId },
         select: { grossCents: true, commissionCents: true, feeCents: true, refundCents: true, adjustmentCents: true, netCents: true, status: true },
@@ -77,10 +77,6 @@ export class PayoutService {
       this.prisma.payout.findMany({
         where: { providerId: targetProviderId },
         select: { totalCents: true, status: true },
-      }),
-      this.prisma.payment.findMany({
-        where: { providerId: targetProviderId, status: 'SUCCESSFUL' },
-        select: { grossCents: true, commissionCents: true, feeCents: true, netCents: true },
       }),
     ]);
 

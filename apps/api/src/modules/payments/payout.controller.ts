@@ -4,7 +4,7 @@ import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { PayoutService } from './payout.service';
 import { PayoutMethodService } from './payout-method.service';
-import { createPayoutSchema, payoutAdjustmentSchema, processPayoutSchema, reconciliationQuerySchema, retryPayoutSchema } from './dto/payout.schema';
+import { createPayoutSchema, payoutAdjustmentSchema } from './dto/payout.schema';
 
 @Controller('payments/payouts')
 export class PayoutController {

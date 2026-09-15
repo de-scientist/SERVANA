@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PayoutService } from './payout.service';
 
 function makePrisma() {
@@ -56,13 +56,6 @@ function makePrisma() {
       return fn(tx);
     }),
   } as any;
-}
-
-function makeGateway() {
-  return {
-    getById: jest.fn().mockReturnValue({ id: 'prov1', name: 'Test Provider', methods: ['MPESA'] }),
-    get: jest.fn().mockReturnValue({ id: 'other', name: 'Other', methods: ['OTHER'] }),
-  };
 }
 
 function makeAudit() {

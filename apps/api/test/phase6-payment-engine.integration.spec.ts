@@ -617,6 +617,7 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       expect(list.status).toBe(403);
     });
   });
+<<<<<<< HEAD
 
   describe('payouts', () => {
     it('admin can create a manual payout', async () => {
@@ -692,4 +693,6 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       expect(dashboard.status).toBe(403);
     });
   });
+=======
+>>>>>>> origin/main
 });

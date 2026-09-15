@@ -32,12 +32,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/provider/bookings" className="text-muted-foreground hover:text-foreground">
               Provider bookings
             </Link>
+<<<<<<< HEAD
             <Link href="/earnings" className="text-muted-foreground hover:text-foreground">
               Earnings
             </Link>
             <Link href="/admin/payouts" className="text-muted-foreground hover:text-foreground">
               Payouts
             </Link>
+=======
+>>>>>>> origin/main
           </nav>
         </header>
         <AppProviders>{children}</AppProviders>

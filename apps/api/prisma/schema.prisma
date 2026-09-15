@@ -533,8 +533,11 @@ model PayoutMethod {
   type      PayoutMethodType
   detailsRef String
   isDefault Boolean          @default(false)
+<<<<<<< HEAD
   createdAt DateTime         @default(now())
   payouts   Payout[]
+=======
+>>>>>>> origin/main
 }
 
 enum PayoutMethodType {
@@ -550,11 +553,16 @@ model Payout {
   totalCents BigInt
   currency    String        @default("KES")
   reference   String        @unique
+<<<<<<< HEAD
   retryCount  Int           @default(0)
   failedCount Int           @default(0)
   createdAt   DateTime      @default(now())
   items       PayoutItem[]
   method      PayoutMethod? @relation(fields: [methodId], references: [id])
+=======
+  createdAt   DateTime      @default(now())
+  items       PayoutItem[]
+>>>>>>> origin/main
 }
 
 enum PayoutStatus {
