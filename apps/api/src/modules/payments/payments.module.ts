@@ -9,11 +9,12 @@ import { PaymentWebhookController } from './payment-webhook.controller';
 import { CommissionController } from './commission.controller';
 import { PayoutController } from './payout.controller';
 import { PayoutService } from './payout.service';
+import { PayoutMethodService } from './payout-method.service';
 
 @Module({
   imports: [PrismaModule, PaymentModule],
   controllers: [PaymentController, PaymentWebhookController, CommissionController, PayoutController],
-  providers: [PaymentGateway, CommissionService, PaymentService, PayoutService],
-  exports: [PaymentService, CommissionService, PayoutService],
+  providers: [PaymentGateway, CommissionService, PaymentService, PayoutService, PayoutMethodService],
+  exports: [PaymentService, CommissionService, PayoutService, PayoutMethodService],
 })
 export class PaymentsModule {}
