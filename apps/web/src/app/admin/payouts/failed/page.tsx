@@ -28,7 +28,7 @@ export default function FailedPayoutsPage() {
     apiClient.get<{ data: FailedPayout[] }>('/payments/payouts/failed')
       .then((res) => {
         if (res.error) { setError(res.error.message); setPayouts([]); }
-        else { setPayouts((res.data as FailedPayout[]) ?? []); }
+        else { setPayouts((res.data as { data: FailedPayout[] }).data ?? []); }
       })
       .finally(() => setLoading(false));
   }, []);
