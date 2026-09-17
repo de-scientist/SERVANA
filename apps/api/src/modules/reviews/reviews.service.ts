@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, ReviewStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AppLoggerService } from '../../common/logging/logger.service';
@@ -18,7 +18,7 @@ import {
 
 export interface ReviewActor {
   sub: string;
-  role: 'CUSTOMER' | 'PROVIDER' | 'ADMIN' | 'SUPPORT' | 'SUPER_ADMIN';
+  role: string;
 }
 
 interface DimensionInput {
@@ -53,7 +53,6 @@ export class ReviewsService {
     if (existing) throw new ConflictException('Review already exists for this booking');
 
     const dimensionScores: DimensionInput[] = input.dimensions;
-    const avg = dimensionScores.reduce((s, d) => s + d.score, 0) / dimensionScores.length;
 
     const created = await this.prisma.$transaction(async (tx) => {
       const review = await tx.review.create({
@@ -62,9 +61,9 @@ export class ReviewsService {
           customerId,
           providerId: booking.providerId,
           overall: input.overall,
+          status: 'APPROVED',
           title: input.title ?? null,
           body: input.body ?? null,
-          status: 'APPROVED',
         },
       });
 
@@ -94,16 +93,13 @@ export class ReviewsService {
   async respond(actor: ReviewActor, reviewId: string, input: RespondReviewInput) {
     const review = await this.prisma.review.findUnique({
       where: { id: reviewId },
-      include: { provider: true },
     });
 
     if (!review) throw new NotFoundException('Review not found');
     if (actor.role !== 'PROVIDER') throw new ForbiddenException('Only providers can respond');
     if (review.providerId !== actor.sub) throw new ForbiddenException('Not your provider');
 
-    const existing = await this.prisma.reviewResponse.findUnique({ where: { reviewId } });
-
-    const response = await this.prisma.reviewResponse.upsert({
+    await this.prisma.reviewResponse.upsert({
       where: { reviewId },
       update: { body: input.body, updatedAt: new Date() },
       create: { reviewId, body: input.body },
@@ -113,11 +109,11 @@ export class ReviewsService {
       actorId: actor.sub,
       action: 'review.respond',
       entity: 'reviewResponse',
-      entityId: response.id,
+      entityId: reviewId,
       after: { reviewId, body: input.body },
     });
 
-    return response;
+    return { reviewId, body: input.body };
   }
 
   async moderate(actor: ReviewActor, reviewId: string, input: ModerateReviewInput) {
@@ -128,7 +124,7 @@ export class ReviewsService {
     const review = await this.prisma.review.findUnique({ where: { id: reviewId } });
     if (!review) throw new NotFoundException('Review not found');
 
-    let status: ReviewStatus;
+    let status: string;
     switch (input.action) {
       case 'APPROVE':
         status = 'APPROVED';
@@ -178,7 +174,7 @@ export class ReviewsService {
     const pageSize = Math.min(50, Math.max(1, input.pageSize ?? 20));
 
     const where: Prisma.ReviewWhereInput = { providerId };
-    if (input.status) where.status = input.status;
+    if (input.status) where.status = input.status as any;
 
     const [rows, total] = await Promise.all([
       this.prisma.review.findMany({
@@ -202,62 +198,83 @@ export class ReviewsService {
   }
 
   async getStats(providerId: string) {
-    const [reviews, totalCustomers, completedBookings] = await Promise.all([
-      this.prisma.review.findMany({
-        where: { providerId, status: 'APPROVED' },
-        include: { dimensions: true },
-      }),
-      this.prisma.booking.count({
-        where: { providerId, status: 'COMPLETED', customerId: { not: null } },
-      }),
-      this.prisma.booking.count({
-        where: { providerId, status: 'COMPLETED' },
-      }),
-    ]);
+    const reviews = await this.prisma.review.findMany({
+      where: { providerId, status: 'APPROVED' as any },
+      include: { dimensions: true },
+    });
 
-    const approved = reviews.filter((r) => r.status === 'APPROVED');
-    const overallAvg = approved.length
-      ? approved.reduce((s, r) => s + r.overall, 0) / approved.length
+    const overallAvg = reviews.length
+      ? reviews.reduce((s, r) => s + r.overall, 0) / reviews.length
       : 0;
 
-    const dimAvgs: Record<string, number> = {};
-    for (const dim of ['Quality', 'Professionalism', 'Communication', 'Punctuality', 'Value']) {
-      const scores = approved.flatMap((r) => r.dimensions.filter((d) => d.name === dim).map((d) => d.score));
-      dimAvgs[dim] = scores.length ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
+    const bookings = await this.prisma.booking.findMany({
+      where: { providerId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const completedBookings = bookings.filter((b) => b.status === 'COMPLETED');
+    const cancelledBookings = bookings.filter((b) => b.status === 'CANCELLED');
+    const totalBookings = bookings.length;
+
+    const customerIds = new Set(
+      completedBookings.map((b) => b.customerId).filter(Boolean),
+    );
+    const repeatCustomerIds = new Set<string>();
+    const customerCounts = new Map<string, number>();
+    for (const b of completedBookings) {
+      if (!b.customerId) continue;
+      const count = (customerCounts.get(b.customerId) || 0) + 1;
+      customerCounts.set(b.customerId, count);
+      if (count >= 2) repeatCustomerIds.add(b.customerId);
     }
 
-    const customerIds = await this.prisma.booking.findMany({
-      where: { providerId, status: 'COMPLETED' },
-      select: { customerId: true },
-    });
-    const uniqueCustomers = new Set(customerIds.map((b) => b.customerId));
-    const repeatCustomers = await this.prisma.booking.groupBy({
-      where: { providerId, status: 'COMPLETED' },
-      by: ['customerId'],
-      having: { customerId: { _count: { gte: 2 } } },
-      _count: { customerId: true },
-    });
-    const repeatRate = uniqueCustomers.size > 0 ? repeatCustomers.length / uniqueCustomers.size : 0;
+    const repeatRate = customerIds.size > 0 ? repeatCustomerIds.size / customerIds.size : 0;
+    const cancellationRate = totalBookings > 0 ? cancelledBookings.length / totalBookings : 0;
 
-    const cancelled = await this.prisma.booking.count({
-      where: { providerId, status: 'CANCELLED' },
-    });
-    const cancellationRate = completedBookings > 0 ? cancelled / (completedBookings + cancelled) : 0;
+    const respondedCount = reviews.filter((r) => r.response !== null).length;
+    const responseRate = reviews.length > 0 ? respondedCount / reviews.length : 0;
 
-    const responded = await this.prisma.review.count({
-      where: { providerId, status: 'APPROVED', response: { some: {} } },
+    let onTimeCount = 0;
+    for (const b of completedBookings) {
+      const actualEnd = b.updatedAt ?? b.startsAt;
+      if (actualEnd <= b.endsAt) onTimeCount++;
+    }
+    const onTimeRate = completedBookings.length > 0 ? onTimeCount / completedBookings.length : 0;
+
+    const verification = await this.prisma.providerVerification.findUnique({
+      where: { providerId },
+      select: { level: true, status: true },
     });
-    const responseRate = approved.length > 0 ? responded / approved.length : 0;
+    const verificationLevel = verification?.level ?? null;
+    const verificationScore = verificationLevel
+      ? ({ BASIC: 20, PHONE_VERIFIED: 40, IDENTITY_VERIFIED: 60, PROFESSIONAL_VERIFIED: 75, BUSINESS_VERIFIED: 85, TRUSTED_PROVIDER: 100 } as Record<string, number>)[verificationLevel] ?? 0
+      : 0;
+
+    const profile = await this.prisma.providerProfile.findUnique({ where: { userId: providerId } });
+    let profileCompleteness = 0;
+    if (profile) {
+      const fields = [
+        profile.businessName, profile.slug, profile.bio, profile.city, profile.country,
+        profile.tagline, profile.websiteUrl, profile.businessPhone, profile.yearsExperience,
+        profile.lat, profile.lng, profile.serviceRadiusKm,
+      ];
+      const filled = fields.filter((f) => f !== null && f !== undefined && f !== '').length;
+      profileCompleteness = Math.round((filled / fields.length) * 100);
+    }
 
     return {
       overallRating: Math.round(overallAvg * 10) / 10,
-      totalReviews: approved.length,
-      totalCustomers: uniqueCustomers.size,
-      completedJobs: completedBookings,
+      totalReviews: reviews.length,
+      completedJobs: completedBookings.length,
       repeatRate: Math.round(repeatRate * 100) / 100,
       cancellationRate: Math.round(cancellationRate * 100) / 100,
       responseRate: Math.round(responseRate * 100) / 100,
-      dimensionAverages: dimAvgs,
+      onTimeRate: Math.round(onTimeRate * 100) / 100,
+      verificationLevel,
+      verificationScore,
+      profileCompleteness,
+      totalCustomers: customerIds.size,
+      totalBookings,
     };
   }
 
@@ -276,7 +293,7 @@ export class ReviewsService {
         name: d.name,
         score: d.score,
       })),
-      response: r.response ? { id: r.response.id, body: r.response.body, createdAt: r.response.createdAt } : null,
+      response: r.response ? { id: r.response.id, body: r.response.body, createdAt: r.response.createdAt, updatedAt: r.response.updatedAt } : null,
       booking: r.booking ?? null,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,

@@ -533,11 +533,8 @@ model PayoutMethod {
   type      PayoutMethodType
   detailsRef String
   isDefault Boolean          @default(false)
-<<<<<<< HEAD
   createdAt DateTime         @default(now())
   payouts   Payout[]
-=======
->>>>>>> origin/main
 }
 
 enum PayoutMethodType {
@@ -553,16 +550,11 @@ model Payout {
   totalCents BigInt
   currency    String        @default("KES")
   reference   String        @unique
-<<<<<<< HEAD
   retryCount  Int           @default(0)
   failedCount Int           @default(0)
   createdAt   DateTime      @default(now())
   items       PayoutItem[]
   method      PayoutMethod? @relation(fields: [methodId], references: [id])
-=======
-  createdAt   DateTime      @default(now())
-  items       PayoutItem[]
->>>>>>> origin/main
 }
 
 enum PayoutStatus {
@@ -701,6 +693,7 @@ model Review {
   customerId String
   providerId String
   overall    Int
+  status     String @default("APPROVED")
   title      String?
   body       String?
   dimensions ReviewDimension[]
@@ -708,22 +701,27 @@ model Review {
   reported   Boolean @default(false)
   createdAt  DateTime @default(now())
   booking    Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([providerId, status])
 }
 
 model ReviewDimension {
-  id       String @id @default(uuid())
-  reviewId String
-  review   Review @relation(fields: [reviewId], references: [id])
-  name     String
-  score    Int
+  id        String     @id @default(uuid())
+  reviewId  String
+  review    Review     @relation(fields: [reviewId], references: [id])
+  name      String
+  score     Int
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model ReviewResponse {
-  id       String @id @default(uuid())
-  reviewId String @unique
-  review   Review @relation(fields: [reviewId], references: [id])
-  body     String
-  createdAt DateTime @default(now())
+  id        String     @id @default(uuid())
+  reviewId  String     @unique
+  review    Review     @relation(fields: [reviewId], references: [id])
+  body      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model ProviderRankingSnapshot {

@@ -1,12 +1,16 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ReviewsService } from './reviews.service';
+import { ReviewsService, ReviewActor } from './reviews.service';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {
-  CreateReviewInput,
-  RespondReviewInput,
-  ModerateReviewInput,
-  ListReviewsInput,
+  createReviewSchema,
+  respondReviewSchema,
+  moderateReviewSchema,
+  listReviewsSchema,
+  type CreateReviewInput,
+  type RespondReviewInput,
+  type ModerateReviewInput,
+  type ListReviewsInput,
 } from './dtos/review.schema';
 
 @Controller('reviews')
@@ -16,10 +20,10 @@ export class ReviewsController {
   @Post()
   @Auth('CUSTOMER')
   async create(
-    @CurrentUser() actor: { sub: string },
-    @Body(new ZodValidationPipe(CreateReviewSchema)) input: CreateReviewInput,
+    @CurrentUser() actor: { sub: string; roles: string[] },
+    @Body(new ZodValidationPipe(createReviewSchema)) input: CreateReviewInput,
   ) {
-    const result = await this.reviews.create(actor, input);
+    const result = await this.reviews.create({ sub: actor.sub, role: 'CUSTOMER' }, input);
     return { data: result };
   }
 
@@ -31,7 +35,7 @@ export class ReviewsController {
   @Get('/provider/:providerId')
   async getForProvider(
     @Param('providerId') providerId: string,
-    @Query(new ZodValidationPipe(ListReviewsSchema)) input: ListReviewsInput,
+    @Query(new ZodValidationPipe(listReviewsSchema)) input: ListReviewsInput,
   ) {
     return { data: await this.reviews.getForProvider(providerId, input) };
   }
@@ -40,10 +44,10 @@ export class ReviewsController {
   @Auth('PROVIDER')
   async respond(
     @Param('id') id: string,
-    @CurrentUser() actor: { sub: string },
-    @Body(new ZodValidationPipe(RespondReviewSchema)) input: RespondReviewInput,
+    @CurrentUser() actor: { sub: string; roles: string[] },
+    @Body(new ZodValidationPipe(respondReviewSchema)) input: RespondReviewInput,
   ) {
-    const result = await this.reviews.respond(actor, id, input);
+    const result = await this.reviews.respond({ sub: actor.sub, role: 'PROVIDER' }, id, input);
     return { data: result };
   }
 
@@ -51,10 +55,10 @@ export class ReviewsController {
   @Auth('ADMIN', 'SUPER_ADMIN')
   async moderate(
     @Param('id') id: string,
-    @CurrentUser() actor: { sub: string },
-    @Body(new ZodValidationPipe(ModerateReviewSchema)) input: ModerateReviewInput,
+    @CurrentUser() actor: { sub: string; roles: string[] },
+    @Body(new ZodValidationPipe(moderateReviewSchema)) input: ModerateReviewInput,
   ) {
-    const result = await this.reviews.moderate(actor, id, input);
+    const result = await this.reviews.moderate({ sub: actor.sub, role: 'ADMIN' }, id, input);
     return { data: result };
   }
 }
