@@ -205,7 +205,7 @@ export class RankingService {
     const repeatRate = customerIds.size > 0 ? repeatCustomerIds.size / customerIds.size : 0;
     const cancellationRate = totalBookings > 0 ? cancelledBookings.length / totalBookings : 0;
 
-    const respondedCount = reviews.filter((r) => r.response !== null || r.responseId).length;
+    const respondedCount = reviews.filter((r) => r.response !== null).length;
     const responseRate = reviews.length > 0 ? respondedCount / reviews.length : 0;
 
     let onTimeCount = 0;

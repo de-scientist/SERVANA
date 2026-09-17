@@ -23,6 +23,8 @@ import { NotificationModule } from './common/adapters/notification/notification.
 import { StorageModule } from './common/adapters/storage/storage.module';
 import { ThrottlerGuard } from './common/guards/throttler.guard';
 import { LoggingModule } from './common/logging/logging.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { RankingModule } from './modules/ranking/ranking.module';
 
 @Module({
   imports: [
@@ -47,6 +49,8 @@ import { LoggingModule } from './common/logging/logging.module';
     AiModule,
     NotificationModule,
     StorageModule,
+    ReviewsModule,
+    RankingModule,
     LoggingModule,
   ],
   providers: [
