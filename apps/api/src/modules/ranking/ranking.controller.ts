@@ -1,8 +1,6 @@
-import { Body, Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { RankingService, ProviderDashboard } from './ranking.service';
-import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { rankingWeightsSchema, type RankingWeights } from '../reviews/dtos/review.schema';
+import { Auth } from '../auth/guards/current-user.decorator';
 
 @Controller('ranking')
 export class RankingController {
