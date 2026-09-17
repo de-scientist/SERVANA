@@ -428,7 +428,21 @@ export class ProvidersService {
     if (!profile || profile.status !== ProviderStatus.VERIFIED) {
       throw new NotFoundException('Provider not found');
     }
-    return this.mapPublicProfile(profile);
+
+    const [reviews, bookings] = await Promise.all([
+      this.prisma.review.findMany({ where: { providerId: profile.id, status: 'APPROVED' } }),
+      this.prisma.booking.findMany({ where: { providerId: profile.id } }),
+    ]);
+
+    const overallAvg = reviews.length
+      ? Math.round((reviews.reduce((s, r) => s + r.overall, 0) / reviews.length) * 10) / 10
+      : 0;
+    const completedBookings = bookings.filter((b) => b.status === 'COMPLETED').length;
+    const totalBookings = bookings.length;
+    const completionRate = totalBookings > 0 ? Math.round((completedBookings / totalBookings) * 100) : 0;
+    const customersServed = new Set(bookings.map((b) => b.customerId).filter(Boolean)).size;
+
+    return this.mapPublicProfile(profile, { overallAvg, totalReviews: reviews.length, customersServed, completionRate });
   }
 
   async getPublicService(id: string) {
@@ -793,59 +807,62 @@ export class ProvidersService {
     };
   }
 
-  private mapPublicProfile(p: {
-    id: string;
-    businessName: string | null;
-    slug: string;
-    tagline: string | null;
-    bio: string | null;
-    city: string | null;
-    country: string | null;
-    address: Prisma.JsonValue | null;
-    lat: number | null;
-    lng: number | null;
-    travelToCustomer: boolean;
-    serviceRadiusKm: number | null;
-    websiteUrl: string | null;
-    businessPhone: string | null;
-    yearsExperience: number | null;
-    languages: string[];
-    socialLinks: Prisma.JsonValue | null;
-    workingPreferences: Prisma.JsonValue | null;
-    createdAt: Date;
-    updatedAt: Date;
-    categories: { category: { id: string; name: string; slug: string } }[];
-    services: {
+  private mapPublicProfile(
+    p: {
       id: string;
-      serviceId: string | null;
-      categoryId: string | null;
-      name: string;
-      description: string | null;
-      priceCents: bigint;
-      currency: string;
-      durationMin: number;
-      deliveryTypes: Prisma.JsonValue;
-      travelFeeCents: bigint | null;
-      images: Prisma.JsonValue | null;
-      isActive: boolean;
-      sortOrder: number;
-      bookingWindowDays: number | null;
+      businessName: string | null;
+      slug: string;
+      tagline: string | null;
+      bio: string | null;
+      city: string | null;
+      country: string | null;
+      address: Prisma.JsonValue | null;
+      lat: number | null;
+      lng: number | null;
+      travelToCustomer: boolean;
+      serviceRadiusKm: number | null;
+      websiteUrl: string | null;
+      businessPhone: string | null;
+      yearsExperience: number | null;
+      languages: string[];
+      socialLinks: Prisma.JsonValue | null;
+      workingPreferences: Prisma.JsonValue | null;
       createdAt: Date;
       updatedAt: Date;
-    }[];
-    portfolio: {
-      id: string;
-      title: string;
-      description: string | null;
-      images: Prisma.JsonValue | null;
-      link: string | null;
-      sortOrder: number;
-      createdAt: Date;
-      updatedAt: Date;
-    }[];
-    verification: { status: string; level: string; verifiedAt: Date | null } | null;
-    user: { name: string; profileImage: string | null };
-  }) {
+      categories: { category: { id: string; name: string; slug: string } }[];
+      services: {
+        id: string;
+        serviceId: string | null;
+        categoryId: string | null;
+        name: string;
+        description: string | null;
+        priceCents: bigint;
+        currency: string;
+        durationMin: number;
+        deliveryTypes: Prisma.JsonValue;
+        travelFeeCents: bigint | null;
+        images: Prisma.JsonValue | null;
+        isActive: boolean;
+        sortOrder: number;
+        bookingWindowDays: number | null;
+        createdAt: Date;
+        updatedAt: Date;
+      }[];
+      portfolio: {
+        id: string;
+        title: string;
+        description: string | null;
+        images: Prisma.JsonValue | null;
+        link: string | null;
+        sortOrder: number;
+        createdAt: Date;
+        updatedAt: Date;
+      }[];
+      verification: { status: string; level: string; verifiedAt: Date | null } | null;
+      user: { name: string; profileImage: string | null };
+    },
+    summary?: { overallAvg: number; totalReviews: number; customersServed: number; completionRate: number },
+  ) {
     return {
       id: p.id,
       businessName: p.businessName,
@@ -877,8 +894,12 @@ export class ProvidersService {
             verifiedAt: p.verification.verifiedAt,
           }
         : { verified: false, level: null, verifiedAt: null },
-      // Placeholders for later phases (booking not yet implemented).
-      reviews: { summary: null, placeholder: true },
+      reviews: {
+        overall: summary?.overallAvg ?? 0,
+        total: summary?.totalReviews ?? 0,
+        completionRate: summary?.completionRate ?? 0,
+        customersServed: summary?.customersServed ?? 0,
+      },
       availability: { placeholder: true },
       booking: { cta: true, enabled: false },
     };

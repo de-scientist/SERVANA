@@ -200,7 +200,7 @@ export class ReviewsService {
   async getStats(providerId: string) {
     const reviews = await this.prisma.review.findMany({
       where: { providerId, status: 'APPROVED' as any },
-      include: { dimensions: true },
+      include: { dimensions: true, response: true },
     });
 
     const overallAvg = reviews.length

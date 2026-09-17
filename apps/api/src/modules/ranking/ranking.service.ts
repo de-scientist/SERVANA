@@ -173,8 +173,8 @@ export class RankingService {
 
   private async computeStats(providerId: string): Promise<ProviderSignals> {
     const reviews = await this.prisma.review.findMany({
-      where: { providerId, status: 'APPROVED' },
-      include: { dimensions: true },
+      where: { providerId, status: 'APPROVED' as any },
+      include: { dimensions: true, response: true },
     });
 
     const overallAvg = reviews.length
