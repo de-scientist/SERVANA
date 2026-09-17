@@ -167,7 +167,6 @@ export class ReviewsService {
         dimensions: { orderBy: { createdAt: 'asc' } },
         response: true,
         booking: { select: { reference: true, startsAt: true } },
-        customer: { select: { name: true, profileImage: true } },
       },
     });
     if (!review) throw new NotFoundException('Review not found');
