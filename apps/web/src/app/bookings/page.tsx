@@ -52,6 +52,15 @@ export default function CustomerBookingsPage() {
     setItems((prev) => prev.filter((b) => b.id !== id));
   }
 
+  async function messageProvider(bookingId: string) {
+    const res = await apiClient.post<{ id: string }>('/conversations', { bookingId });
+    if (!res.error && res.data) {
+      window.location.href = `/messages/${(res.data as { id: string }).id}`;
+    } else if (res.error) {
+      setError(res.error.message);
+    }
+  }
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="text-2xl font-bold">My bookings</h1>
@@ -97,11 +106,16 @@ export default function CustomerBookingsPage() {
             </div>
             <div className="mt-3 flex items-center justify-between">
               <span className="text-sm font-semibold">{(Number(b.priceCents) / 100).toFixed(2)} {b.currency}</span>
-              {['PENDING', 'CONFIRMED'].includes(b.status) && (
-                <button onClick={() => cancel(b.id)} className="text-sm font-medium text-red-600 hover:underline">
-                  Cancel
+              <div className="flex gap-3">
+                <button onClick={() => messageProvider(b.id)} className="text-sm font-medium text-primary hover:underline">
+                  Message provider
                 </button>
-              )}
+                {['PENDING', 'CONFIRMED'].includes(b.status) && (
+                  <button onClick={() => cancel(b.id)} className="text-sm font-medium text-red-600 hover:underline">
+                    Cancel
+                  </button>
+                )}
+              </div>
             </div>
           </li>
         ))}
