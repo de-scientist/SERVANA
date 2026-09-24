@@ -29,6 +29,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/bookings" className="text-muted-foreground hover:text-foreground">
               My bookings
             </Link>
+            <Link href="/products" className="text-muted-foreground hover:text-foreground">
+              Shop
+            </Link>
+            <Link href="/cart" className="text-muted-foreground hover:text-foreground">
+              Cart
+            </Link>
+            <Link href="/orders" className="text-muted-foreground hover:text-foreground">
+              Orders
+            </Link>
             <Link href="/earnings" className="text-muted-foreground hover:text-foreground">
               Earnings
             </Link>
