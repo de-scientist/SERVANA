@@ -62,8 +62,12 @@ function makeAudit() {
   return { record: jest.fn().mockResolvedValue(undefined) };
 }
 
-function service(prisma?: any, audit?: any) {
-  return new PayoutService(prisma ?? makePrisma(), audit ?? makeAudit());
+function makeNotifications() {
+  return { notify: jest.fn().mockResolvedValue([]) } as any;
+}
+
+function service(prisma?: any, audit?: any, notifications?: any) {
+  return new PayoutService(prisma ?? makePrisma(), audit ?? makeAudit(), notifications ?? makeNotifications());
 }
 
 function makePayoutData(overrides: Record<string, any> = {}) {
