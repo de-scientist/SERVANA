@@ -51,8 +51,12 @@ function makePromotions() {
   } as any;
 }
 
+function makeNotifications() {
+  return { notify: jest.fn().mockResolvedValue([]) } as any;
+}
+
 function service(prisma?: any, payments?: any) {
-  return new OrderService(prisma ?? makePrisma(), makeAudit(), payments ?? makePayments(), makeProducts(), makePromotions());
+  return new OrderService(prisma ?? makePrisma(), makeAudit(), payments ?? makePayments(), makeProducts(), makePromotions(), makeNotifications());
 }
 
 function cartWith(itemOverrides: Record<string, any> = {}) {

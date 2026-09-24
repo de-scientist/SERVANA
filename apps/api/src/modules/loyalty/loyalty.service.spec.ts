@@ -70,7 +70,8 @@ function makeDb(opts: {
 
 function svc(db?: any) {
   const audit = { record: jest.fn().mockResolvedValue(undefined) } as any;
-  return { service: new LoyaltyService(db ?? makeDb(), audit), audit };
+  const notifications = { notify: jest.fn().mockResolvedValue([]) } as any;
+  return { service: new LoyaltyService(db ?? makeDb(), audit, notifications), audit, notifications };
 }
 
 describe('LoyaltyService', () => {
