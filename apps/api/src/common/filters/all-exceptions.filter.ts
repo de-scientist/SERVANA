@@ -41,8 +41,27 @@ export class AllExceptionsFilter implements ExceptionFilter {
         details = r.details ?? r;
       }
     } else if (exception instanceof Error) {
+      // Never leak internals (Prisma query fragments, stack traces, paths).
+      // Details go to server logs only. Hand-rolled 4xx errors (err.status)
+      // keep their status and message; everything else becomes generic.
       this.logger.error(exception.message, exception.stack);
-      message = exception.message;
+      const maybe = exception as { status?: unknown; statusCode?: unknown };
+      const hint =
+        typeof maybe.status === 'number'
+          ? maybe.status
+          : typeof maybe.statusCode === 'number'
+            ? maybe.statusCode
+            : HttpStatus.INTERNAL_SERVER_ERROR;
+      if (hint >= 400 && hint < 500) {
+        status = hint;
+        code = `HTTP_${hint}`;
+        message = exception.message;
+      } else {
+        status = HttpStatus.INTERNAL_SERVER_ERROR;
+        code = 'INTERNAL_ERROR';
+        message = 'An unexpected error occurred.';
+        details = undefined;
+      }
     }
 
     const body: ErrorBody = { error: { code, message, details } };
