@@ -326,6 +326,150 @@ export class PaymentService {
     );
   }
 
+  // --- order capture (webhook SUCCESS for order payments) -----------------------
+  // Finalizes reserved stock, books commission + seller earning, queues the
+  // seller payout and confirms the order — all atomically. Platform-owned
+  // orders (no seller) keep the full margin as commission so the ledger
+  // invariant (payments == commissions + fees + earnings) always holds.
+
+  private async captureOrderPayment(tx: Prisma.TransactionClient, payment: any, event: PaymentWebhookEvent) {
+    const order = await tx.order.findUnique({
+      where: { id: payment.orderId },
+      include: { items: { include: { product: { select: { providerId: true } } } } },
+    });
+    if (!order) return { ok: true, ignored: true };
+
+    const sellerId: string | null =
+      order.items.map((i: any) => i.product?.providerId).find(Boolean) ?? null;
+    const calc = await this.commission.compute(payment.grossCents, {
+      providerId: sellerId,
+      categoryId: null,
+    });
+    const platformOrder = !sellerId;
+    const commissionCents = platformOrder ? payment.grossCents : calc.commissionCents;
+    const netCents = payment.grossCents - commissionCents;
+
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'SUCCESSFUL',
+        commissionCents,
+        netCents,
+        webhookRaw: event as any,
+      },
+    });
+
+    await tx.paymentTransaction.create({
+      data: { paymentId: payment.id, type: 'CAPTURE', amountCents: payment.grossCents, currency: payment.currency },
+    });
+
+    await tx.commission.upsert({
+      where: { paymentId: payment.id },
+      create: {
+        paymentId: payment.id,
+        ruleSnapshot: (platformOrder
+          ? [{ id: 'platform', scope: 'platform', type: 'PERCENTAGE', value: 10000, priority: 0 }]
+          : calc.ruleSnapshot) as any,
+        baseCents: payment.grossCents,
+        rateBasisPoints: platformOrder ? 10000 : calc.rateBasisPoints,
+        commissionCents,
+      },
+      update: {
+        ruleSnapshot: (platformOrder
+          ? [{ id: 'platform', scope: 'platform', type: 'PERCENTAGE', value: 10000, priority: 0 }]
+          : calc.ruleSnapshot) as any,
+        rateBasisPoints: platformOrder ? 10000 : calc.rateBasisPoints,
+        commissionCents,
+      },
+    });
+
+    if (!platformOrder) {
+      const earning = await tx.providerEarning.upsert({
+        where: { orderId: order.id },
+        create: {
+          providerId: sellerId!,
+          orderId: order.id,
+          grossCents: payment.grossCents,
+          commissionCents,
+          feeCents: 0n,
+          netCents,
+          status: 'AVAILABLE',
+        },
+        update: {
+          grossCents: payment.grossCents,
+          commissionCents,
+          netCents,
+          status: 'AVAILABLE',
+        },
+      });
+
+      const payoutMethod = await this.ensurePayoutMethod(tx, sellerId!);
+      const payout = await tx.payout.upsert({
+        where: { reference: `PO_${payment.id}` },
+        create: {
+          providerId: sellerId!,
+          methodId: payoutMethod.id,
+          status: 'PENDING',
+          totalCents: netCents,
+          currency: payment.currency,
+          reference: `PO_${payment.id}`,
+        },
+        update: {},
+      });
+      await tx.payoutItem.upsert({
+        where: { payoutId_earningId: { payoutId: payout.id, earningId: earning.id } },
+        create: { payoutId: payout.id, earningId: earning.id, amountCents: netCents },
+        update: {},
+      });
+    }
+
+    // Finalize reservations: units leave stock exactly once. Reservations made
+    // this impossible to oversell, so quantity covers qty by construction.
+    for (const item of order.items) {
+      const row = await tx.inventory.findUnique({
+        where: { productId_variantId: { productId: item.productId, variantId: item.variantId ?? null } },
+      });
+      if (!row) continue;
+      await tx.inventory.update({
+        where: { id: row.id },
+        data: {
+          quantity: row.quantity - item.qty,
+          reserved: Math.max(0, row.reserved - item.qty),
+        },
+      });
+    }
+
+    await this.awardLoyalty(tx, order.customerId, payment.id, payment.grossCents);
+
+    if (order.status === 'PENDING') {
+      await tx.order.update({ where: { id: order.id }, data: { status: 'PAID' } });
+      await tx.orderStatusHistory.create({ data: { orderId: order.id, from: 'PENDING', to: 'PAID' } });
+    }
+
+    return { ok: true, captured: true };
+  }
+
+  /** Release checkout reservations when the payment window expires. */
+  private async expireOrderHold(tx: Prisma.TransactionClient, orderId: string) {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+    if (!order || order.status !== 'PENDING') return;
+    for (const item of order.items) {
+      const row = await tx.inventory.findUnique({
+        where: { productId_variantId: { productId: item.productId, variantId: item.variantId ?? null } },
+      });
+      if (!row) continue;
+      await tx.inventory.update({
+        where: { id: row.id },
+        data: { reserved: Math.max(0, row.reserved - item.qty) },
+      });
+    }
+    await tx.order.update({ where: { id: orderId }, data: { status: 'CANCELLED' } });
+    await tx.orderStatusHistory.create({ data: { orderId, from: 'PENDING', to: 'CANCELLED' } });
+  }
+
   // --- refund ---------------------------------------------------------------
 
   async refund(actor: PaymentActor, paymentId: string, reason?: string) {
@@ -353,10 +497,39 @@ export class PaymentService {
         await tx.paymentTransaction.create({
           data: { paymentId, type: 'REFUND', amountCents: p.grossCents, currency: p.currency },
         });
-        await tx.providerEarning.updateMany({
-          where: { bookingId: p.bookingId! },
-          data: { status: 'REVERSED', refundCents: p.grossCents },
-        });
+        if (p.bookingId) {
+          await tx.providerEarning.updateMany({
+            where: { bookingId: p.bookingId },
+            data: { status: 'REVERSED', refundCents: p.grossCents },
+          });
+        }
+        if (p.orderId) {
+          await tx.providerEarning.updateMany({
+            where: { orderId: p.orderId },
+            data: { status: 'REVERSED', refundCents: p.grossCents },
+          });
+          // Sold units go back to stock (capture had deducted them).
+          const order = await tx.order.findUnique({
+            where: { id: p.orderId },
+            include: { items: true },
+          });
+          if (order) {
+            for (const item of order.items) {
+              const row = await tx.inventory.findUnique({
+                where: { productId_variantId: { productId: item.productId, variantId: item.variantId ?? null } },
+              });
+              if (!row) continue;
+              await tx.inventory.update({
+                where: { id: row.id },
+                data: { quantity: { increment: item.qty } },
+              });
+            }
+            await tx.order.update({ where: { id: order.id }, data: { status: 'REFUNDED' } });
+            await tx.orderStatusHistory.create({
+              data: { orderId: order.id, from: order.status as any, to: 'REFUNDED' },
+            });
+          }
+        }
 
         // Reverse loyalty, idempotently.
         const earned = await tx.loyaltyTransaction.findFirst({ where: { refType: 'PAYMENT', refId: paymentId } });
