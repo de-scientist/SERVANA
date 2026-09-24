@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { fetchService, formatPrice } from '@/lib/server-api';
+import { fetchCrossSell } from '@/lib/shop-api';
 import AvailabilityPicker from '@/components/AvailabilityPicker';
 import BookServicePanel from '@/components/BookServicePanel';
 
@@ -25,6 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ServicePage({ params }: PageProps) {
   const s = await fetchService(params.id);
   if (!s) notFound();
+  const crossSell = await fetchCrossSell(s.id);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -86,6 +88,24 @@ export default async function ServicePage({ params }: PageProps) {
           <section className="mt-8 rounded-lg border bg-card p-5">
             <AvailabilityPicker slug={s.provider.slug} serviceId={s.id} />
           </section>
+
+          {crossSell.length > 0 && (
+            <section className="mt-8">
+              <h2 className="text-xl font-semibold">Recommended aftercare</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Products that pair well with this service.
+              </p>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {crossSell.slice(0, 4).map((p) => (
+                  <Link key={p.id} href={`/products/${p.id}`} className="rounded-lg border bg-card p-4 hover:border-primary">
+                    <h3 className="font-medium">{p.name}</h3>
+                    <p className="mt-1 text-sm font-semibold">{formatPrice(p.effectivePrice, p.currency)}</p>
+                    {p.reason && <p className="mt-1 text-xs text-muted-foreground">{p.reason}</p>}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         <aside className="lg:col-span-1">
