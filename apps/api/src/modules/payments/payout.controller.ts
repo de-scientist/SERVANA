@@ -6,8 +6,6 @@ import { PayoutService } from './payout.service';
 import { PayoutMethodService } from './payout-method.service';
 import { createPayoutSchema, payoutAdjustmentSchema } from './dto/payout.schema';
 
-type Actor = { sub: string; role: any };
-
 @Controller('payments/payouts')
 export class PayoutController {
   constructor(
