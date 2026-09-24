@@ -195,7 +195,6 @@ describe('Phase 13 · AI foundation (integration)', () => {
 
     it('request-logs completions for cost oversight', async () => {
       const admin = await superAdmin();
-      const cust = await register('CUSTOMER', `p13u_${Date.now()}@example.com`);
       const prov = await register('PROVIDER', `p13up_${Date.now()}@example.com`);
       await call('POST', '/providers/me', prov.accessToken, { businessName: 'Copy Studio', city: 'Nairobi' });
 
@@ -205,7 +204,6 @@ describe('Phase 13 · AI foundation (integration)', () => {
       });
       expect(draft.status).toBe(201);
       expect(draft.body.data.caption.length).toBeGreaterThan(0);
-      void cust;
 
       const usage = await call('GET', '/admin/ai/usage?feature=marketing-copy', admin.accessToken);
       expect(usage.body.data.requests).toBeGreaterThanOrEqual(1);
