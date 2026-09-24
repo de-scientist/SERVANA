@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 export const createPayoutSchema = z.object({
-  providerId: z.string().uuid(),
-  methodId: z.string().uuid(),
-  totalCents: z.string(),
+  providerId: z.string().min(1),
+  methodId: z.string().min(1),
+  earningIds: z.array(z.string().min(1)).min(1).max(200),
   currency: z.string().default('KES'),
 });
 export type CreatePayoutInputDto = z.infer<typeof createPayoutSchema>;
