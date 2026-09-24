@@ -5,22 +5,7 @@ import { AppModule } from './app.module';
 import { AppLoggerService } from './common/logging/logger.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
-
-export function assertProductionSecrets(env: NodeJS.ProcessEnv = process.env): void {
-  if (env.NODE_ENV !== 'production') return;
-  const bad = [
-    'JWT_ACCESS_SECRET',
-    'JWT_REFRESH_SECRET',
-  ].filter((k) => {
-    const v = env[k] ?? '';
-    return v.length < 32 || v.startsWith('change_me');
-  });
-  if (bad.length > 0) {
-    throw new Error(
-      `Refusing to boot in production with weak/missing secrets: ${bad.join(', ')}`,
-    );
-  }
-}
+import { assertProductionSecrets } from './common/security/startup';
 
 async function bootstrap(): Promise<void> {
   const logger = new AppLoggerService('Bootstrap');

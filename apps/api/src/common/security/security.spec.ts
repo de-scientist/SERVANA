@@ -23,7 +23,7 @@ import { ProvidersService } from '../../modules/providers/providers.service';
 import { CommissionService } from '../../modules/payments/commission.service';
 import { LoyaltyService } from '../../modules/loyalty/loyalty.service';
 import { PaymentService } from '../../modules/payments/payment.service';
-import { assertProductionSecrets } from '../../main';
+import { assertProductionSecrets } from './startup';
 
 class TestProvider extends SimulatedPaymentProvider {
   readonly id = 'testpay';
