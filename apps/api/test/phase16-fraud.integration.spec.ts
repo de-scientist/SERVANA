@@ -134,21 +134,16 @@ describe('Phase 16 · risk workflows (integration)', () => {
     const admin = await superAdmin();
     const prov = await register('PROVIDER', `p16p_${Date.now()}@example.com`);
     await call('POST', '/providers/me', prov.accessToken, { businessName: 'Burst Studio', city: 'Nairobi' });
-    const me = await prisma.providerProfile.findFirst({
-      where: { userId: (await prisma.user.findUnique({ where: { email: `p16missing_${Date.now()}@example.com` } }))?.id ?? 'x' },
-    });
-    void me;
 
     const allProfiles = await prisma.providerProfile.findMany({ take: 1 });
     const profileId = allProfiles[0].id;
 
     // Plant: five distinct customers, five stars, one hour.
     const reviewIds: string[] = [];
+    const stamp = Date.now();
     for (let i = 0; i < 5; i++) {
-      const c = await register('CUSTOMER', `p16c_${Date.now()}_${i}@example.com`);
-      const user = await prisma.user.findUnique({ where: { email: `p16c_${Date.now()}_${i}@example.com` } }).catch(() => null);
-      void user;
-      const custEmail = `p16c_${Date.now()}_${i}@example.com`;
+      const custEmail = `p16c_${stamp}_${i}@example.com`;
+      await register('CUSTOMER', custEmail);
       const custUser = await prisma.user.findUnique({ where: { email: custEmail } });
       const review = await prisma.review.create({
         data: {
@@ -162,7 +157,6 @@ describe('Phase 16 · risk workflows (integration)', () => {
         },
       });
       reviewIds.push(review.id);
-      void c;
     }
 
     const scan = await call('POST', '/admin/fraud/scan', admin.accessToken, { days: 30 });
