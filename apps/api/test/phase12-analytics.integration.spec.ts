@@ -238,7 +238,7 @@ describe('Phase 12 · analytics (integration)', () => {
     expect(funnel.body.data.paid).toBeGreaterThanOrEqual(1);
     expect(funnel.body.data.overall).toBeGreaterThan(0);
 
-    // Money: KES 2000 gross, 10% commission, net 190000... (gross − refunded).
+    // Money: KES 2000 gross, 10% standard commission, one completion.
     const overview = await call('GET', '/admin/analytics/overview', admin.accessToken);
     expect(Number(overview.body.data.revenue.grossCents)).toBeGreaterThanOrEqual(200000);
     expect(overview.body.data.revenue.commissionCents).toBe('20000');
@@ -253,6 +253,5 @@ describe('Phase 12 · analytics (integration)', () => {
     const ig = attr.body.data.channels.find((c: any) => c.channel === 'Instagram');
     expect(ig).toBeDefined();
     expect(Number(ig.revenueCents)).toBeGreaterThanOrEqual(200000);
-    void custUser;
   });
 });
