@@ -5,6 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AIService } from './ai.service';
 import { RecommendationService } from './recommendation.service';
 import { MatchingService } from './matching.service';
+import { AssistantService } from './assistant.service';
+import { AdminAssistantService } from './admin-assistant.service';
 import { ModerationService } from './moderation.service';
 import { AIAnalyticsService } from './ai-analytics.service';
 import { AIActionService } from './ai-action.service';
@@ -21,6 +23,11 @@ import {
   reviewProposalSchema,
   usageQuerySchema,
 } from './dto/ai.schema';
+import {
+  assistantChatSchema,
+  adminAskSchema,
+  providerAssistSchema,
+} from './dto/assistant.schema';
 
 type Actor = { sub: string; role: string };
 
@@ -31,6 +38,8 @@ export class AIController {
     private readonly ai: AIService,
     private readonly recommendations: RecommendationService,
     private readonly matching: MatchingService,
+    private readonly assistant: AssistantService,
+    private readonly adminAssistant: AdminAssistantService,
     private readonly moderation: ModerationService,
     private readonly analytics: AIAnalyticsService,
     private readonly actions: AIActionService,
@@ -83,6 +92,95 @@ export class AIController {
     @Body(new ZodValidationPipe(explainSchema)) body: any,
   ) {
     return { data: await this.matching.explain(user.sub, body.itemType, body.itemId) };
+  }
+
+  // --- customer assistant: controlled chat, confirmations for irreversible acts ----------
+
+  @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  @Post('ai/assistant/chat')
+  async assistantChat(
+    @CurrentUser() user: Actor,
+    @Body(new ZodValidationPipe(assistantChatSchema)) body: any,
+  ) {
+    return { data: await this.assistant.chat(user.sub, body.message, body.history ?? []) };
+  }
+
+  // --- provider assistant: drafts only, never publishes -------------------------------------
+
+  @Auth('PROVIDER', 'ADMIN', 'SUPER_ADMIN')
+  @Post('ai/assistant/provider')
+  async providerAssist(
+    @CurrentUser() user: Actor,
+    @Body(new ZodValidationPipe(providerAssistSchema)) body: any,
+  ) {
+    if (user.role !== 'PROVIDER') {
+      const err: any = new Error('Providers use this for their own profile.');
+      err.status = 403;
+      throw err;
+    }
+    const profile = await this.prisma.providerProfile.findUnique({
+      where: { userId: user.sub },
+      select: { id: true },
+    });
+    if (!profile) throw new NotFoundException('Provider profile not found');
+    switch (body.kind) {
+      case 'service-description':
+        return {
+          data: {
+            ...(await this.analytics.serviceDescription(user.sub, profile.id, {
+              serviceName: body.topic ?? 'Signature service',
+              tone: body.tone,
+            })),
+            published: false,
+          },
+        };
+      case 'promotion-copy':
+        return {
+          data: {
+            ...(await this.analytics.promotionMessage(user.sub, profile.id, {
+              offer: body.topic ?? 'Special offer',
+              channel: 'instagram',
+              tone: body.tone,
+            })),
+            published: false,
+          },
+        };
+      case 'instagram-caption':
+        return {
+          data: {
+            ...(await this.analytics.marketingDraft(user.sub, profile.id, {
+              topic: body.topic ?? 'New looks',
+              tone: body.tone,
+            })),
+            published: false,
+          },
+        };
+      case 'whatsapp-message':
+        return {
+          data: {
+            ...(await this.analytics.promotionMessage(user.sub, profile.id, {
+              offer: body.topic ?? 'Special offer',
+              channel: 'whatsapp',
+              tone: body.tone,
+            })),
+            published: false,
+          },
+        };
+      case 'performance-explainer':
+      default:
+        return { data: await this.analytics.performanceExplainer(profile.id) };
+    }
+  }
+
+  // --- admin assistant: controlled analytics tools, never raw SQL ------------------------------
+
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Post('admin/ai/ask')
+  async adminAsk(
+    @CurrentUser() user: Actor,
+    @Body(new ZodValidationPipe(adminAskSchema)) body: any,
+  ) {
+    return { data: await this.adminAssistant.ask(user.sub, body.question) };
   }
 
   // --- provider intelligence -----------------------------------------------------------------

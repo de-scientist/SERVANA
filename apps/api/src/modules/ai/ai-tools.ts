@@ -1,11 +1,20 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { minimizeObject } from './guardrails';
 
 export interface ToolDef {
   name: string;
   description: string;
+  /** Roles allowed to invoke this tool through assistants. Empty = any authenticated role. */
+  roles?: string[];
   run: (args: Record<string, any>) => Promise<unknown>;
+}
+
+/** Enforced by every assistant before running a tool. */
+export function assertToolRole(tool: ToolDef, actorRole: string): void {
+  if (tool.roles && tool.roles.length > 0 && !tool.roles.includes(actorRole)) {
+    throw new ForbiddenException(`Tool ${tool.name} is not available to role ${actorRole}`);
+  }
 }
 
 /**
@@ -109,6 +118,7 @@ export function buildTools(prisma: PrismaService): ToolDef[] {
     {
       name: 'revenue_stats',
       description: 'ADMIN ONLY. Aggregate revenue/commission figures for a date range.',
+      roles: ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'],
       run: async (args) => {
         if (args.admin !== true) throw new BadRequestException('revenue_stats requires admin context');
         const where: any = { status: 'SUCCESSFUL' };

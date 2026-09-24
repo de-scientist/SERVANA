@@ -6,6 +6,8 @@ import { AiModule } from '../../common/adapters/ai/ai.module';
 import { AIService } from './ai.service';
 import { RecommendationService } from './recommendation.service';
 import { MatchingService } from './matching.service';
+import { AssistantService } from './assistant.service';
+import { AdminAssistantService } from './admin-assistant.service';
 import { EmbeddingService } from './embedding.service';
 import { ModerationService } from './moderation.service';
 import { AIAnalyticsService } from './ai-analytics.service';
@@ -19,11 +21,13 @@ import { AIController } from './ai.controller';
     AIService,
     RecommendationService,
     MatchingService,
+    AssistantService,
+    AdminAssistantService,
     EmbeddingService,
     ModerationService,
     AIAnalyticsService,
     AIActionService,
   ],
-  exports: [AIService, RecommendationService, MatchingService, EmbeddingService, ModerationService, AIAnalyticsService, AIActionService],
+  exports: [AIService, RecommendationService, MatchingService, AssistantService, AdminAssistantService, EmbeddingService, ModerationService, AIAnalyticsService, AIActionService],
 })
 export class AIModule {}

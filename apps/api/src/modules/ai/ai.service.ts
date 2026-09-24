@@ -40,6 +40,27 @@ export class AIService {
     @Inject(AI_PROVIDER) private readonly provider: AiProvider,
   ) {}
 
+  /** Monthly platform-wide spend cap (env AI_MONTHLY_COST_CENTS_CAP, default KES 500). */
+  async checkCostLimit(): Promise<void> {
+    const cap = BigInt(Number(process.env.AI_MONTHLY_COST_CENTS_CAP ?? 50000));
+    if (cap <= 0n) return; // 0 disables the cap
+    try {
+      const start = new Date();
+      start.setUTCDate(1);
+      start.setUTCHours(0, 0, 0, 0);
+      const rows = await this.prisma.aiRequestLog.findMany({
+        where: { createdAt: { gte: start } },
+        select: { costCents: true },
+      });
+      const spent = rows.reduce((s, r) => s + r.costCents, 0n);
+      if (spent >= cap) {
+        throw new ForbiddenException('AI monthly budget exceeded. Contact an administrator.');
+      }
+    } catch (err) {
+      if (err instanceof ForbiddenException) throw err;
+      this.logger.warn(`Cost-limit check failed open: ${(err as Error).message}`);
+    }
+  }
   /** Fixed-window per-actor/feature budget (in-memory; Redis-backed in future). */
   checkRateLimit(actorId: string, feature: string): void {
     const key = `${actorId}:${feature}`;
@@ -79,6 +100,7 @@ export class AIService {
     if (rawInput.length > 8000) throw new BadRequestException('AI input too long (max 8000 chars)');
 
     if (actorId) this.checkRateLimit(actorId, feature);
+    await this.checkCostLimit();
 
     const screen = screenInjection(rawInput);
     if (screen.flagged) {
