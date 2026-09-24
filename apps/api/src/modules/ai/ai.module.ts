@@ -30,6 +30,6 @@ import { AIController } from './ai.controller';
     AIAnalyticsService,
     AIActionService,
   ],
-  exports: [AIService, RecommendationService, MatchingService, AssistantService, AdminAssistantService, EmbeddingService, ModerationService, AIAnalyticsService, AIActionService],
+  exports: [AIService, RecommendationService, MatchingService, AssistantService, AdminAssistantService, ForecastService, EmbeddingService, ModerationService, AIAnalyticsService, AIActionService],
 })
 export class AIModule {}
