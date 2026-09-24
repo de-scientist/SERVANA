@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -16,6 +17,8 @@ import { ProvidersService } from './providers.service';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {
+  ALLOWED_UPLOAD_TYPES,
+  MAX_UPLOAD_BYTES,
   createProviderProfileSchema,
   updateProviderProfileSchema,
   setProviderCategoriesSchema,
@@ -129,9 +132,21 @@ export class ProvidersController {
 
   @Post('me/media')
   @Auth('PROVIDER')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      // Reject oversized payloads BEFORE buffering them into memory (DoS).
+      limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+      fileFilter: (_req, file, cb) => {
+        if ((ALLOWED_UPLOAD_TYPES as readonly string[]).includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException('Unsupported file type'), false);
+        }
+      },
+    }),
+  )
   async uploadMedia(@CurrentUser() user: { sub: string }, @UploadedFile() file: { buffer: Buffer; mimetype: string; originalname?: string } | undefined) {
-    if (!file) throw new Error('No file provided');
+    if (!file) throw new BadRequestException('No file provided');
     return await this.providers.uploadMedia(user.sub, file);
   }
 

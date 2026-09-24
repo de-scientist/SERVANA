@@ -354,6 +354,10 @@ export class ProvidersService {
     if (!ALLOWED_UPLOAD_TYPES.includes(file.mimetype as (typeof ALLOWED_UPLOAD_TYPES)[number])) {
       throw new ConflictException('Unsupported file type');
     }
+    if (!sniffMatches(file.buffer, file.mimetype)) {
+      // Client-supplied mimetypes are untrusted: verify magic bytes match.
+      throw new ConflictException('File content does not match its declared type');
+    }
     if (file.buffer.byteLength > MAX_UPLOAD_BYTES) {
       throw new ConflictException('File too large');
     }
