@@ -32,6 +32,10 @@ function makeLoyalty() {
   return { earnFromPayment: jest.fn().mockResolvedValue({ transaction: { id: 'lt1' } }) } as any;
 }
 
+function makeNotifications() {
+  return { notify: jest.fn().mockResolvedValue([]) } as any;
+}
+
 function orderRow() {
   return {
     id: 'ord1',
@@ -54,7 +58,7 @@ describe('PaymentService (orders)', () => {
         booking: { findUnique: jest.fn(), update: jest.fn() },
       } as any;
       prisma.payment.create.mockResolvedValue({ id: 'pay1' });
-      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty());
+      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty(), makeNotifications());
       (svc as any).mapPayment = jest.fn().mockReturnValue({ id: 'pay1', status: 'PENDING' });
 
       const result: any = await svc.initiateForOrder({ sub: 'cust1', role: 'CUSTOMER' }, 'ord1', 'MPESA');
@@ -75,7 +79,7 @@ describe('PaymentService (orders)', () => {
           create: jest.fn(),
         },
       } as any;
-      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty());
+      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty(), makeNotifications());
       (svc as any).mapPayment = jest.fn().mockReturnValue({ id: 'pay1', status: 'PENDING' });
 
       await svc.initiateForOrder({ sub: 'cust1', role: 'CUSTOMER' }, 'ord1', 'MPESA');
@@ -87,7 +91,7 @@ describe('PaymentService (orders)', () => {
         order: { findUnique: jest.fn().mockResolvedValue({ ...orderRow(), status: 'PAID' }) },
         payment: { findUnique: jest.fn() },
       } as any;
-      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty());
+      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty(), makeNotifications());
 
       await expect(
         svc.initiateForOrder({ sub: 'cust1', role: 'CUSTOMER' }, 'ord1', 'MPESA'),
@@ -137,7 +141,7 @@ describe('PaymentService (orders)', () => {
     it('finalizes stock, books earning + payout, and marks PAID — never touching bookings', async () => {
       const tx = txWith();
       const prisma = { $transaction: jest.fn(async (fn: any) => fn(tx)) } as any;
-      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty());
+      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty(), makeNotifications());
 
       const result: any = await svc.handleProviderEvent('stub', {
         providerRef: 'stub_ref_1', status: 'SUCCESSFUL', amount: '300000', currency: 'KES',
@@ -169,7 +173,7 @@ describe('PaymentService (orders)', () => {
         items: [{ productId: 'prod1', variantId: null, qty: 2, product: { providerId: null } }],
       });
       const prisma = { $transaction: jest.fn(async (fn: any) => fn(tx)) } as any;
-      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty());
+      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty(), makeNotifications());
 
       const result: any = await svc.handleProviderEvent('stub', {
         providerRef: 'stub_ref_1', status: 'SUCCESSFUL', amount: '300000', currency: 'KES',
@@ -225,7 +229,7 @@ describe('PaymentService (orders)', () => {
         },
         $transaction: jest.fn(async (fn: any) => fn(tx)),
       } as any;
-      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty());
+      const svc = new PaymentService(prisma, makeGateway(), makeCommission(), makeLoyalty(), makeNotifications());
       (svc as any).mapPayment = jest.fn().mockReturnValue({ id: 'pay1', status: 'REFUNDED' });
 
       await svc.refund({ sub: 'admin1', role: 'ADMIN' }, 'pay1', 'Damaged');
