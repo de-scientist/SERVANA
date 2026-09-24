@@ -114,6 +114,12 @@ export default function CartPage() {
               <option value="BANK">Bank</option>
               <option value="OTHER">Other</option>
             </select>
+            <input
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              placeholder="Promo code (optional)"
+              className="h-10 rounded-md border px-3 text-sm uppercase"
+            />
             <button
               onClick={checkout}
               disabled={checkingOut}
