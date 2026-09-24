@@ -60,6 +60,8 @@ describe('Phase 13 · AI foundation (integration)', () => {
     await prisma.refreshToken.deleteMany({});
     await prisma.userRole.deleteMany({});
     await prisma.auditLog.deleteMany({});
+    await prisma.customerProfile.deleteMany({});
+    await prisma.providerProfile.deleteMany({});
     await prisma.user.deleteMany({});
     await prisma.category.deleteMany({});
     await prisma.service.deleteMany({});

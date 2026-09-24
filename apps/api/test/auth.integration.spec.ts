@@ -74,6 +74,8 @@ describe('Auth flow (integration, real Postgres)', () => {
     await prisma.refreshToken.deleteMany({});
     await prisma.userRole.deleteMany({});
     await prisma.auditLog.deleteMany({});
+    await prisma.customerProfile.deleteMany({});
+    await prisma.providerProfile.deleteMany({});
     await prisma.user.deleteMany({});
   }
 

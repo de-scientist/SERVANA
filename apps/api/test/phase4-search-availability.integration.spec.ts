@@ -48,6 +48,8 @@ describe('Phase 4 · search, categories & availability (integration)', () => {
     await prisma.refreshToken.deleteMany({});
     await prisma.userRole.deleteMany({});
     await prisma.auditLog.deleteMany({});
+    await prisma.customerProfile.deleteMany({});
+    await prisma.providerProfile.deleteMany({});
     await prisma.user.deleteMany({});
     await prisma.category.deleteMany({});
   }

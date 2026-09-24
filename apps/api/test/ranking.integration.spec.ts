@@ -61,6 +61,8 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
     await prisma.refreshToken.deleteMany({});
     await prisma.userRole.deleteMany({});
     await prisma.auditLog.deleteMany({});
+    await prisma.customerProfile.deleteMany({});
+    await prisma.providerProfile.deleteMany({});
     await prisma.user.deleteMany({});
     await prisma.category.deleteMany({});
   }

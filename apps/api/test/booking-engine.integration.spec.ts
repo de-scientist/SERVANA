@@ -46,6 +46,7 @@ describe('Phase 5 · booking engine (integration)', () => {
     await prisma.providerCategory.deleteMany({});
     await prisma.providerVerification.deleteMany({});
     await prisma.providerProfile.deleteMany({});
+    await prisma.customerProfile.deleteMany({});
     await prisma.refreshToken.deleteMany({});
     await prisma.userRole.deleteMany({});
     await prisma.auditLog.deleteMany({});
