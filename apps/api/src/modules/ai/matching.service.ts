@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AIService } from './ai.service';
-import { RecommendationService } from './recommendation.service';
 import { parsedCriteriaSchema, ParsedCriteria, fallbackParse } from './matching.parse';
 
 export interface MatchedProvider {
