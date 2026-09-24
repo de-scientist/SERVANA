@@ -152,7 +152,6 @@ describe('Phase 12 · analytics (integration)', () => {
     const admin = await superAdmin();
     const custEmail = `p12cust_${Date.now()}@example.com`;
     const cust = await register('CUSTOMER', custEmail);
-    const custUser = await prisma.user.findUnique({ where: { email: custEmail } });
 
     // Social touch before anything else (first-touch credit).
     const touch = await call('POST', '/attribution/track', cust.accessToken, {
@@ -179,8 +178,6 @@ describe('Phase 12 · analytics (integration)', () => {
     await call('PUT', '/providers/me/availability', prov.accessToken, { rules, exceptions: [] });
     const login = await auth.login({ email: provEmail, password: 'Passw0rd!23' });
     await call('POST', '/providers/me/verification/submit', login.accessToken, { notes: 'v' });
-    const adminUser = await prisma.user.findUnique({ where: { email: `p12v_${Date.now()}@example.com` } }).catch(() => null);
-    void adminUser;
     const vAdminEmail = `p12va_${Date.now()}@example.com`;
     await register('CUSTOMER', vAdminEmail);
     const vAdminUser = await prisma.user.findUnique({ where: { email: vAdminEmail } });
