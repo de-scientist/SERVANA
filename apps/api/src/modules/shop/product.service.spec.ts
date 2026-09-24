@@ -126,13 +126,21 @@ describe('ProductService', () => {
 
     it('never recommends the same product twice', async () => {
       const p = stockedProduct('p1');
-      const prisma = makePrisma({ links: [{ product: p, reason: null, sortOrder: 0 }], products: [p] });
+      const other = stockedProduct('p2', 'Other Oil');
+      const prisma = makePrisma({ links: [{ product: p, reason: null, sortOrder: 0 }] });
+      // Emulate the notIn exclusion the real query applies.
+      prisma.product.findMany.mockImplementation(async ({ where }: any) => {
+        const excluded: string[] = where?.id?.notIn ?? [];
+        return [p, other].filter((x) => !excluded.includes(x.id));
+      });
       prisma.service.findUnique.mockResolvedValue({ id: 'svc1', categoryId: 'cat-hair' });
       const s = svc(prisma);
 
       const result = await s.crossSell({ serviceId: 'svc1', limit: 8 } as any);
       const ids = result.data.map((x: any) => x.id);
       expect(new Set(ids).size).toBe(ids.length);
+      expect(ids).toContain('p1');
+      expect(ids).toContain('p2');
     });
   });
 });
