@@ -169,13 +169,50 @@ export default async function ProviderPage({ params }: PageProps) {
         </section>
       )}
 
-      <section className="mt-10 rounded-lg border bg-muted/30 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Reviews &amp; availability</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Ratings and live availability will appear here once the booking engine launches. Reviews are only published
-          after completed, verified appointments.
+      <section className="mt-10">
+        <h2 className="text-xl font-semibold">Reviews</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Only customers with completed, verified appointments can leave a review.
         </p>
-        <div id="reviews" className="mt-3" />
+        {reviews.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No verified reviews yet.</p>
+        ) : (
+          <ul className="mt-4 space-y-4">
+            {reviews.map((r) => (
+              <li key={r.id} className="rounded-lg border bg-card p-4 shadow-soft">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold">{r.overall.toFixed(1)} ★</p>
+                  <p className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</p>
+                </div>
+                {r.title && <p className="mt-1 font-medium">{r.title}</p>}
+                {r.body && <p className="mt-1 text-sm text-foreground/90">{r.body}</p>}
+                {r.dimensions.length > 0 && (
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground sm:grid-cols-5">
+                    {r.dimensions.map((d) => (
+                      <div key={d.id} className="flex justify-between gap-2">
+                        <dt>{d.name}</dt>
+                        <dd className="font-medium text-foreground">{d.score}/5</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                {r.response && (
+                  <div className="mt-3 rounded-md bg-muted/50 p-3 text-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Provider response</p>
+                    <p className="mt-1">{r.response.body}</p>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-10 rounded-lg border bg-muted/30 p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Availability</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Live availability will appear here once the booking engine launches.
+        </p>
         <div id="availability" className="mt-2" />
       </section>
     </main>
