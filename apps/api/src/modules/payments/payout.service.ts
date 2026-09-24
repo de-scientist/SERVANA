@@ -744,7 +744,7 @@ export class PayoutService {
 
     const [commissions, feeTxns, earnings, payouts] = await Promise.all([
       paymentIds.length
-        ? this.prisma.commission.findMany({ where: { paymentId: { in: paymentIds } }, select: { paymentId: true, commissionCents: true } })
+        ? this.prisma.commission.findMany({ where: { paymentId: { in: paymentIds } }, select: { paymentId: true, commissionCents: true, rateBasisPoints: true } })
         : [],
       paymentIds.length
         ? this.prisma.paymentTransaction.findMany({ where: { paymentId: { in: paymentIds }, type: 'FEE' }, select: { amountCents: true } })
@@ -782,12 +782,17 @@ export class PayoutService {
 
     // Referential integrity (booking- and order-linked alike)
     const commissionByPayment = new Set(commissions.map((c) => (c as any).paymentId));
+    // Platform-owned orders keep 100% margin as commission (no seller earning
+    // expected) — they are fully reconciled without an earning row.
+    const platformKept = new Set(
+      commissions.filter((c) => (c as any).rateBasisPoints === 10000).map((c) => (c as any).paymentId),
+    );
     const earningLinkIds = new Set(
       activeEarnings.map((e) => (e as any).bookingId ?? (e as any).orderId).filter(Boolean),
     );
     const orphanPaymentsMissingCommission = payments.filter((x) => !commissionByPayment.has(x.id)).map((x) => x.id);
     const orphanPaymentsMissingEarning = payments
-      .filter((x) => ((x as any).bookingId ?? (x as any).orderId) && !earningLinkIds.has(((x as any).bookingId ?? (x as any).orderId) as string))
+      .filter((x) => ((x as any).bookingId ?? (x as any).orderId) && !platformKept.has(x.id) && !earningLinkIds.has(((x as any).bookingId ?? (x as any).orderId) as string))
       .map((x) => x.id);
     const orphanEarningsWithoutPayment = activeEarnings
       .filter((e) => ((e as any).bookingId ?? (e as any).orderId) && !paymentLinkIds.has(((e as any).bookingId ?? (e as any).orderId) as string))
