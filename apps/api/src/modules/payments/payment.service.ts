@@ -667,6 +667,7 @@ export class PaymentService {
     return {
       id: p.id,
       bookingId: p.bookingId,
+      orderId: p.orderId,
       status: p.status,
       method: p.method,
       provider: p.provider,
