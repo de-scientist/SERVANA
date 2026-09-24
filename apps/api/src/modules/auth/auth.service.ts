@@ -8,6 +8,7 @@ import { RbacService } from '../rbac/rbac.service';
 import { AuditService } from '../audit/audit.service';
 import { NOTIFICATION_PROVIDER, NotificationProvider } from '../../common/adapters/notification/notification.provider';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   generateToken,
   hashToken,
@@ -44,6 +45,7 @@ export class AuthService {
     @Inject(NOTIFICATION_PROVIDER) private readonly notifications: NotificationProvider,
     // Optional for backwards compatibility (unit specs construct manually).
     private readonly loyalty?: LoyaltyService,
+    private readonly analytics?: AnalyticsService,
   ) {}
 
   private get accessSecret(): string {
@@ -90,6 +92,10 @@ export class AuthService {
     } catch {
       // ignore — earn path is best-effort at registration
     }
+    await this.analytics?.track('USER_REGISTERED', {
+      userId: created.id,
+      payload: { role: dto.role ?? 'CUSTOMER' },
+    });
 
     const tokens = await this.issueTokens(created.id, dto.email, roles);
     return { user: created, tokens };

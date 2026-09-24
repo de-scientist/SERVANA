@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AppLoggerService } from '../../common/logging/logger.service';
 import { StorageProvider, STORAGE_PROVIDER } from '../../common/adapters/storage/storage.provider';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { toMinorUnits, fromMinorUnits } from '../../common/money/money';
 import { slugify, randomSuffix } from '../../common/utils/slug';
 import {
@@ -32,6 +33,7 @@ export class ProvidersService {
     private readonly audit: AuditService,
     private readonly logger: AppLoggerService,
     @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
+    private readonly analytics?: AnalyticsService,
   ) {}
 
   // --- ownership helpers ---------------------------------------------------
@@ -447,6 +449,10 @@ export class ProvidersService {
     const responded = reviews.filter((r) => (r as any).response !== null).length;
     const responseRate = reviews.length > 0 ? Math.round((responded / reviews.length) * 100) : 0;
 
+    await this.analytics?.track('PROVIDER_VIEWED', {
+      payload: { providerId: profile.id, slug },
+    });
+
     return this.mapPublicProfile(profile, { overallAvg, totalReviews: reviews.length, customersServed, completionRate, responseRate });
   }
 
@@ -468,6 +474,9 @@ export class ProvidersService {
       throw new NotFoundException('Service not found');
     }
     const p = service.provider;
+    await this.analytics?.track('SERVICE_VIEWED', {
+      payload: { serviceId: service.id, providerId: p.id },
+    });
     return {
       id: service.id,
       name: service.name,

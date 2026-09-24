@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProvidersService } from '../providers/providers.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { UpdateAvailabilityInput } from './dto/availability.schema';
 
 const STEP_MIN = 15;
@@ -17,6 +18,7 @@ export class AvailabilityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly providers: ProvidersService,
+    private readonly analytics?: AnalyticsService,
   ) {}
 
   async setAvailability(
@@ -75,6 +77,9 @@ export class AvailabilityService {
   ): Promise<DaySlots[]> {
     const provider = await this.providers.getPublicProfile(slug);
     if (!provider) throw new NotFoundException('Provider not found');
+    await this.analytics?.track('BOOKING_STARTED', {
+      payload: { providerSlug: slug, providerId: provider.id, serviceId },
+    });
     return this.generateSlots(provider.id, serviceId, date, days);
   }
 

@@ -8,6 +8,7 @@ import { NotificationModule } from '../../common/adapters/notification/notificat
 import { RbacModule } from '../rbac/rbac.module';
 import { AuditModule } from '../audit/audit.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { LoyaltyModule } from '../loyalty/loyalty.module';
     AuditModule,
     NotificationModule,
     LoyaltyModule,
+    AnalyticsModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_ACCESS_SECRET ?? 'change_me_access',

@@ -10,6 +10,7 @@ import { PaymentGateway } from './payment.gateway';
 import { CommissionService } from './commission.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { findInventoryRow } from '../../common/inventory/inventory';
 import { formatMoney } from '../../common/money/money';
 import { PaymentMethod, PaymentWebhookEvent } from '../../common/adapters/payment/payment.provider';
@@ -44,6 +45,7 @@ export class PaymentService {
     private readonly commission: CommissionService,
     private readonly loyalty: LoyaltyService,
     private readonly notifications: NotificationsService,
+    private readonly analytics?: AnalyticsService,
   ) {}
 
   // --- initiate -------------------------------------------------------------
@@ -366,6 +368,14 @@ export class PaymentService {
         }
         await tx.booking.update({ where: { id: booking.id }, data: { paymentStatus: 'SUCCESSFUL' } });
         await this.notifyPaymentEvent(payment, 'PAYMENT_SUCCESSFUL');
+        await this.analytics?.track('PAYMENT_SUCCESSFUL', {
+          userId: payment.customerId,
+          payload: {
+            paymentId: payment.id,
+            bookingId: booking.id,
+            amountCents: payment.grossCents.toString(),
+          },
+        });
 
         return { ok: true, captured: true };
       },
@@ -491,6 +501,22 @@ export class PaymentService {
       await tx.orderStatusHistory.create({ data: { orderId: order.id, from: 'PENDING', to: 'PAID' } });
     }
     await this.notifyPaymentEvent(payment, 'PAYMENT_SUCCESSFUL');
+    await this.analytics?.track('PAYMENT_SUCCESSFUL', {
+      userId: payment.customerId,
+      payload: {
+        paymentId: payment.id,
+        orderId: order.id,
+        amountCents: payment.grossCents.toString(),
+      },
+    });
+    await this.analytics?.track('PRODUCT_PURCHASED', {
+      userId: payment.customerId,
+      payload: {
+        orderId: order.id,
+        items: order.items.map((i: any) => ({ productId: i.productId, qty: i.qty })),
+        totalCents: payment.grossCents.toString(),
+      },
+    });
 
     return { ok: true, captured: true };
   }

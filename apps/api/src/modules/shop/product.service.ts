@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { toMinorUnits, fromMinorUnits } from '../../common/money/money';
 import { findInventoryRow } from '../../common/inventory/inventory';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   CreateProductInput,
   UpdateProductInput,
@@ -34,6 +35,7 @@ export class ProductService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly analytics?: AnalyticsService,
   ) {}
 
   // --- public browse ----------------------------------------------------------
@@ -75,6 +77,9 @@ export class ProductService {
       include: PUBLIC_PRODUCT_INCLUDE,
     });
     if (!p || p.status !== 'ACTIVE') throw new NotFoundException('Product not found');
+    await this.analytics?.track('PRODUCT_VIEWED', {
+      payload: { productId: p.id, categoryId: p.categoryId },
+    });
     return this.mapProduct(p);
   }
 

@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AppLoggerService } from '../../common/logging/logger.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   CreateReviewInput,
   RespondReviewInput,
@@ -34,6 +35,7 @@ export class ReviewsService {
     private readonly audit: AuditService,
     private readonly logger: AppLoggerService,
     private readonly loyalty: LoyaltyService,
+    private readonly analytics?: AnalyticsService,
   ) {}
 
   /**
@@ -143,6 +145,10 @@ export class ReviewsService {
     } catch (err) {
       this.logger.warn(`Review loyalty earn failed for ${created.id}: ${(err as Error).message}`);
     }
+    await this.analytics?.track('REVIEW_CREATED', {
+      userId: customerId,
+      payload: { reviewId: created.id, providerId: booking.providerId, overall: input.overall },
+    });
 
     return created;
   }

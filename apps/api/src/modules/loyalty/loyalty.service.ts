@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 export type LoyaltyEvent = 'BOOKING' | 'REVIEW' | 'REFERRAL' | 'PURCHASE' | 'SIGNUP';
 
@@ -50,6 +51,7 @@ export class LoyaltyService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
+    private readonly analytics?: AnalyticsService,
   ) {}
 
   async onModuleInit() {
@@ -142,6 +144,10 @@ export class LoyaltyService implements OnModuleInit {
         balance: (account.balanceCents as bigint).toString(),
         customerName: '',
       },
+    });
+    await this.analytics?.track('POINTS_EARNED', {
+      userId: input.userId,
+      payload: { event: input.event, points: rule.points, refType: input.refType, refId: input.refId },
     });
     return { account: { ...account, tierId: tier.id }, transaction: txn, tier, duplicate: false };
   }
@@ -311,6 +317,10 @@ export class LoyaltyService implements OnModuleInit {
       await this.audit.record({
         actorId: userId, action: 'reward.redeem', entity: 'loyaltyTransaction', entityId: txn.id,
         after: { rewardId, voucher, cost: reward.costCents.toString() },
+      });
+      await this.analytics?.track('POINTS_REDEEMED', {
+        userId,
+        payload: { rewardId, points: reward.costCents.toString(), voucher },
       });
       return { voucher, reward: reward.name, cost: reward.costCents.toString() };
     });

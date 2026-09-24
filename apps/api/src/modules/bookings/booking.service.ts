@@ -9,6 +9,7 @@ import { Prisma, BookingStatus, ServiceDeliveryType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReferralService } from '../loyalty/referral.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { QueueService, JOB_BOOKING_REMINDER } from '../queue/queue.service';
 import { formatMoney } from '../../common/money/money';
 import {
@@ -43,6 +44,7 @@ export class BookingService {
     private readonly referrals: ReferralService,
     private readonly notifications: NotificationsService,
     private readonly queue: QueueService,
+    private readonly analytics?: AnalyticsService,
   ) {}
 
   async create(actor: BookingActor, input: CreateBookingInput) {
@@ -145,6 +147,15 @@ export class BookingService {
           { delay: reminderIn },
         );
       }
+      await this.analytics?.track('BOOKING_CREATED', {
+        userId: actor.sub,
+        payload: {
+          bookingId: booking.id,
+          providerId: ps.provider.id,
+          serviceId: ps.id,
+          amountCents: ps.priceCents.toString(),
+        },
+      });
 
       return mapped;
     } catch (err) {
@@ -244,6 +255,10 @@ export class BookingService {
     // Retention: a first completed + paid booking qualifies a pending referral.
     if (to === 'COMPLETED') {
       await this.referrals.qualifyOnBookingComplete(id);
+      await this.analytics?.track('BOOKING_COMPLETED', {
+        userId: b.customerId,
+        payload: { bookingId: id, providerId: b.providerId },
+      });
     }
     // Customer lifecycle notices (best-effort; notify() never throws).
     if (to === 'CONFIRMED' || to === 'COMPLETED') {

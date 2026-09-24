@@ -1023,7 +1023,9 @@ model Attribution {
   utmCampaign String?
   utmContent String?
   referralCode String?
+  providerSlug String?
   createdAt  DateTime @default(now())
+  @@index([userId, createdAt])
 }
 
 model AuditLog {
