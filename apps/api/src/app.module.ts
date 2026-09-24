@@ -28,6 +28,7 @@ import { RankingModule } from './modules/ranking/ranking.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { MessagingModule } from './modules/messaging/messaging.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     ShopModule,
     LoyaltyModule,
     NotificationsModule,
+    MessagingModule,
     LoggingModule,
   ],
   providers: [
