@@ -29,13 +29,22 @@ interface Explain {
   evidence: string[];
 }
 
+interface ChatTurn {
+  from: 'you' | 'ai';
+  text: string;
+  confirmation?: { action: string; message: string };
+}
+
 export default function AssistantPage() {
+  const [mode, setMode] = useState<'search' | 'chat'>('search');
   const [query, setQuery] = useState('I need a makeup artist tomorrow in Nairobi under KSh 3,000.');
   const [criteria, setCriteria] = useState<Criteria | null>(null);
   const [results, setResults] = useState<Match[]>([]);
   const [explanations, setExplanations] = useState<Record<string, Explain>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turns, setTurns] = useState<ChatTurn[]>([]);
+  const [draft, setDraft] = useState('');
 
   async function search() {
     if (query.trim().length < 3) return;
