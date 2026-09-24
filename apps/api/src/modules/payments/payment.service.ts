@@ -162,6 +162,46 @@ export class PaymentService {
     return this.mapPayment(payment.id);
   }
 
+  /**
+   * Retry a failed/expired order payment with a fresh provider reference.
+   * Stock reservations from checkout are untouched — the order is still PENDING.
+   */
+  async retryOrderPayment(actor: PaymentActor, orderId: string, method?: PaymentMethod) {
+    const payment = await this.prisma.payment.findUnique({ where: { orderId } });
+    if (!payment) {
+      return this.initiateForOrder(actor, orderId, method ?? 'OTHER');
+    }
+    if (payment.customerId !== actor.sub && actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN' && actor.role !== 'SUPPORT') {
+      throw new ForbiddenException('Not your order');
+    }
+    if (payment.status === 'SUCCESSFUL' || payment.status === 'REFUNDED') {
+      throw new BadRequestException('Order already paid');
+    }
+    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.status !== 'PENDING') {
+      throw new BadRequestException(`Order in status ${order.status} cannot be paid`);
+    }
+
+    const provider = this.gateway.get((method ?? payment.method) as PaymentMethod);
+    const init = await provider.initiate({
+      idempotencyKey: `pay_order_${order.id}_retry_${Date.now()}`,
+      amountCents: order.totalCents,
+      currency: order.currency,
+      reference: `ORD_${order.id.slice(0, 8).toUpperCase()}`,
+      method: (method ?? payment.method) as PaymentMethod,
+    });
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'PENDING',
+        providerRef: init.providerRef,
+        expiresAt: new Date(Date.now() + PAYOUT_EXPIRY_MINUTES * 60_000),
+      },
+    });
+    return this.mapPayment(payment.id);
+  }
+
   // --- provider webhook / callback ------------------------------------------
 
   async handleProviderEvent(providerId: string, event: PaymentWebhookEvent) {
