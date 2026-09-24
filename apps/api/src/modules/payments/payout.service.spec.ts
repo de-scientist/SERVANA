@@ -174,7 +174,7 @@ describe('PayoutService', () => {
       });
       const svc = service(prisma);
 
-      const result = await svc.processPayout({ sub: 'prov1', role: 'PROVIDER' }, 'p1');
+      const result = await svc.processPayout({ sub: 'admin1', role: 'ADMIN' }, 'p1');
       expect(result.status).toBe('SUCCESSFUL');
     });
 
@@ -201,7 +201,7 @@ describe('PayoutService', () => {
       });
       const svc = service(prisma);
 
-      const result = await svc.processPayout({ sub: 'prov1', role: 'PROVIDER' }, 'p1');
+      const result = await svc.processPayout({ sub: 'admin1', role: 'ADMIN' }, 'p1');
       expect(result.status).toBe('FAILED');
     });
 
@@ -210,12 +210,12 @@ describe('PayoutService', () => {
       prisma.payout.findUnique.mockResolvedValue({ id: 'p1', status: 'SUCCESSFUL' });
       const svc = service(prisma);
 
-      await expect(svc.processPayout({ sub: 'prov1', role: 'PROVIDER' }, 'p1')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(svc.processPayout({ sub: 'admin1', role: 'ADMIN' }, 'p1')).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('throws ForbiddenException for provider not owning payout', async () => {
+    it('throws ForbiddenException when a provider tries to self-process a payout', async () => {
       const prisma = makePrisma();
-      prisma.payout.findUnique.mockResolvedValue({ id: 'p1', providerId: 'other', status: 'PENDING' });
+      prisma.payout.findUnique.mockResolvedValue({ id: 'p1', providerId: 'prov1', status: 'PENDING' });
       const svc = service(prisma);
 
       await expect(svc.processPayout({ sub: 'prov1', role: 'PROVIDER' }, 'p1')).rejects.toBeInstanceOf(ForbiddenException);
