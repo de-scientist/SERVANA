@@ -107,8 +107,7 @@ describe('AIService (gateway)', () => {
     );
   });
 
-  it('aggregates usage by feature for cost oversight', async () => {
-    const prisma = makePrisma();
+  it('aggregates usage by feature for cost oversight', async () => {    const prisma = makePrisma();
     prisma.aiRequestLog.findMany.mockResolvedValue([
       { feature: 'a', inputTokens: 100, outputTokens: 50, costCents: 1n, status: 'OK' },
       { feature: 'a', inputTokens: 100, outputTokens: 50, costCents: 1n, status: 'BLOCKED' },
@@ -122,5 +121,30 @@ describe('AIService (gateway)', () => {
     const a = usage.byFeature.find((f) => f.feature === 'a')!;
     expect(a.requests).toBe(2);
     expect(a.blocked).toBe(1);
+  });
+
+  it('enforces the monthly cost cap before calling the model', async () => {
+    process.env.AI_MONTHLY_COST_CENTS_CAP = '100';
+    const prisma = makePrisma();
+    prisma.aiRequestLog.findMany.mockResolvedValue([{ costCents: 150n }]);
+    const provider = makeProvider();
+    const s = new AIService(prisma, makeAudit(), provider);
+    delete process.env.AI_MONTHLY_COST_CENTS_CAP;
+
+    await expect(
+      s.complete({ actorId: 'u1', feature: 't', system: 's', input: 'hello' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(provider.complete).not.toHaveBeenCalled();
+  });
+
+  it('fails open when cost accounting itself errors', async () => {
+    const prisma = makePrisma();
+    prisma.aiRequestLog.findMany.mockRejectedValue(new Error('db down'));
+    const s = new AIService(prisma, makeAudit(), makeProvider());
+
+    // Availability beats accounting: the request proceeds, warning logged.
+    await expect(
+      s.complete({ actorId: 'u1', feature: 't', system: 's', input: 'hello' }),
+    ).resolves.toBeDefined();
   });
 });
