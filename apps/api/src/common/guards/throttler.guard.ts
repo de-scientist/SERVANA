@@ -42,8 +42,12 @@ interface Bucket {
 @Injectable()
 export class ThrottlerGuard implements CanActivate {
   private readonly buckets = new Map<string, Bucket>();
-  private readonly defaultLimit = Number(process.env.RATE_LIMIT_DEFAULT ?? 20);
-  private readonly defaultTtl = Number(process.env.RATE_LIMIT_TTL ?? 60);
+  // Honors the documented .env names (RATE_LIMIT_MAX / RATE_LIMIT_WINDOW_MS)
+  // with legacy RATE_LIMIT_DEFAULT / RATE_LIMIT_TTL fallbacks.
+  private readonly defaultLimit = Number(process.env.RATE_LIMIT_MAX ?? process.env.RATE_LIMIT_DEFAULT ?? 120);
+  private readonly defaultTtl =
+    Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60000) / 1000 ||
+    Number(process.env.RATE_LIMIT_TTL ?? 60);
 
   constructor(
     private readonly reflector: Reflector,

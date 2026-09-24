@@ -13,6 +13,26 @@ import { StorageProvider, STORAGE_PROVIDER } from '../../common/adapters/storage
 import { AnalyticsService } from '../analytics/analytics.service';
 import { toMinorUnits, fromMinorUnits } from '../../common/money/money';
 import { slugify, randomSuffix } from '../../common/utils/slug';
+
+/** Magic-byte check: declared mimetype must match actual file content. */
+export function sniffMatches(buffer: Buffer, mimetype: string): boolean {
+  if (!buffer || buffer.length < 12) return false;
+  const head = buffer.subarray(0, 12);
+  switch (mimetype) {
+    case 'image/png':
+      return head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47;
+    case 'image/jpeg':
+      return head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
+    case 'image/webp':
+      return (
+        head.toString('ascii', 0, 4) === 'RIFF' && head.toString('ascii', 8, 12) === 'WEBP'
+      );
+    case 'application/pdf':
+      return head.toString('ascii', 0, 4) === '%PDF';
+    default:
+      return false;
+  }
+}
 import {
   ALLOWED_UPLOAD_TYPES,
   MAX_UPLOAD_BYTES,
