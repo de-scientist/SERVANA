@@ -14,7 +14,6 @@ import {
   claimReferralSchema,
   createPromotionSchema,
   updatePromotionSchema,
-  validatePromotionSchema,
 } from './dto/loyalty.schema';
 
 type Actor = { sub: string; role: string };
