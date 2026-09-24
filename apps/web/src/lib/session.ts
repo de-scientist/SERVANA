@@ -1,3 +1,13 @@
+/**
+ * SECURITY NOTE (Phase 17 audit): tokens in `localStorage` are readable by any
+ * script running on the origin, so a stored-XSS flaw would leak the 14-day
+ * refresh token. The recommended hardening is httpOnly + Secure + SameSite
+ * cookies issued by the API (with CSRF protection) and a short-lived in-memory
+ * access token. Until that migration lands:
+ * - keep the CSP/helmet headers strict and never render untrusted HTML,
+ * - never log or interpolate tokens (see api-client),
+ * - clear both keys on logout and on 401 refresh failure.
+ */
 const ACCESS_KEY = 'servana_token';
 const REFRESH_KEY = 'servana_refresh';
 
