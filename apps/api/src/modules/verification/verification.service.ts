@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -17,7 +18,6 @@ import {
   ListVerificationsInput,
 } from './dto/verification.schema';
 import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from '../providers/dto/provider.schema';
-import { ConflictException as Conflict, BadRequestException } from '@nestjs/common';
 import { sniffMatches } from '../providers/providers.service';
 
 @Injectable()
