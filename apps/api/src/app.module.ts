@@ -31,6 +31,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { MessagingModule } from './modules/messaging/messaging.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AIModule } from './modules/ai/ai.module';
+import { FraudModule } from './modules/fraud/fraud.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { AIModule } from './modules/ai/ai.module';
     MessagingModule,
     AnalyticsModule,
     AIModule,
+    FraudModule,
     LoggingModule,
   ],
   providers: [

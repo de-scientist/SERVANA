@@ -7,6 +7,7 @@ import { RecommendationService } from './recommendation.service';
 import { MatchingService } from './matching.service';
 import { AssistantService } from './assistant.service';
 import { AdminAssistantService } from './admin-assistant.service';
+import { ForecastService } from './forecast.service';
 import { ModerationService } from './moderation.service';
 import { AIAnalyticsService } from './ai-analytics.service';
 import { AIActionService } from './ai-action.service';
@@ -40,6 +41,7 @@ export class AIController {
     private readonly matching: MatchingService,
     private readonly assistant: AssistantService,
     private readonly adminAssistant: AdminAssistantService,
+    private readonly forecast: ForecastService,
     private readonly moderation: ModerationService,
     private readonly analytics: AIAnalyticsService,
     private readonly actions: AIActionService,
@@ -264,5 +266,19 @@ export class AIController {
   @Get('admin/ai/churn/:userId')
   async churn(@Param('userId') userId: string) {
     return { data: await this.analytics.churnScore(userId) };
+  }
+
+  // --- experimental forecasting (labeled, no accuracy claims) ------------------------------
+
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Get('admin/ai/forecast/demand')
+  async demandForecast(@Query('categoryId') categoryId?: string, @Query('city') city?: string) {
+    return { data: await this.forecast.demandForecast({ categoryId, city }) };
+  }
+
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Get('admin/ai/forecast/churn-watchlist')
+  async churnWatchlist(@Query('limit') limit?: string) {
+    return { data: await this.forecast.churnWatchlist(limit ? Number(limit) : undefined) };
   }
 }
