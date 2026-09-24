@@ -29,6 +29,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [method, setMethod] = useState('MPESA');
+  const [promoCode, setPromoCode] = useState('');
   const [checkingOut, setCheckingOut] = useState(false);
   const router = useRouter();
 
@@ -52,7 +53,10 @@ export default function CartPage() {
   async function checkout() {
     setCheckingOut(true);
     setError(null);
-    const res = await apiClient.post<{ order: { id: string } }>('/orders/checkout', { method });
+    const res = await apiClient.post<{ order: { id: string } }>('/orders/checkout', {
+      method,
+      ...(promoCode.trim() ? { promoCode: promoCode.trim() } : {}),
+    });
     setCheckingOut(false);
     if (res.error) {
       setError(res.error.message);
