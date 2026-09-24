@@ -11,6 +11,7 @@ import { AdminAssistantService } from './admin-assistant.service';
 import { EmbeddingService } from './embedding.service';
 import { ModerationService } from './moderation.service';
 import { AIAnalyticsService } from './ai-analytics.service';
+import { ForecastService } from './forecast.service';
 import { AIActionService } from './ai-action.service';
 import { AIController } from './ai.controller';
 
@@ -23,6 +24,7 @@ import { AIController } from './ai.controller';
     MatchingService,
     AssistantService,
     AdminAssistantService,
+    ForecastService,
     EmbeddingService,
     ModerationService,
     AIAnalyticsService,

@@ -792,11 +792,19 @@ model DisputeMessage {
 
 model FraudAlert {
   id        String       @id @default(uuid())
+  checkKey  String       @default("legacy")
   entityType String
   entityId   String
-  score      Int
+  score      Int // 0–100 risk signal. NEVER an automatic punishment.
   reason     String
+  evidence   Json?
+  recommendedAction String?
   status     FraudStatus @default(OPEN)
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime @default(now())
+  @@index([status, createdAt])
+  @@index([checkKey, entityType, entityId, status])
 }
 
 enum FraudStatus {
