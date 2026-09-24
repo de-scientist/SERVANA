@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { PaymentService } from '../payments/payment.service';
 import { ProductService } from './product.service';
+import { findInventoryRow } from '../../common/inventory/inventory';
 import {
   CheckoutInput,
   ListOrdersInput,
@@ -107,9 +108,7 @@ export class OrderService {
           currency = p.currency;
 
           // Re-read inventory inside the txn (serializable → no oversell).
-          const row = await tx.inventory.findUnique({
-            where: { productId_variantId: { productId: p.id, variantId: item.variantId ?? null } },
-          });
+          const row = await findInventoryRow(tx, p.id, item.variantId ?? null);
           if (!row) {
             throw new BadRequestException(`"${p.name}" is out of stock`);
           }
@@ -271,9 +270,7 @@ export class OrderService {
           await tx.payment.update({ where: { id: payment.id }, data: { status: 'CANCELLED' } });
         }
         for (const item of order.items) {
-          const row = await tx.inventory.findUnique({
-            where: { productId_variantId: { productId: item.productId, variantId: item.variantId ?? null } },
-          });
+          const row = await findInventoryRow(tx, item.productId, item.variantId ?? null);
           if (!row) continue;
           if (finalized) {
             // Stock was deducted at capture: put units back.
@@ -356,7 +353,7 @@ export class OrderService {
       entityId: id,
       before: { status: from },
       after: { status: to },
-      reason: reason ?? null,
+      reason: reason ?? undefined,
     });
     const updated = await this.prisma.order.findUnique({ where: { id }, include: this.orderInclude() });
     return this.mapOrder(updated);
