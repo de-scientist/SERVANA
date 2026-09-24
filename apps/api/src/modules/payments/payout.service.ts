@@ -733,10 +733,14 @@ export class PayoutService {
 
     const payments = await this.prisma.payment.findMany({
       where: paymentWhere,
-      select: { id: true, bookingId: true, grossCents: true, feeCents: true, commissionCents: true },
+      select: { id: true, bookingId: true, orderId: true, grossCents: true, feeCents: true, commissionCents: true },
     });
     const paymentIds = payments.map((x) => x.id);
-    const paymentBookingIds = new Set(payments.map((x) => x.bookingId).filter(Boolean) as string[]);
+    // Link key covers both booking and order payments: no transaction may
+    // disappear between payment → commission → earning → payout.
+    const paymentLinkIds = new Set(
+      payments.map((x) => (x as any).bookingId ?? (x as any).orderId).filter(Boolean) as string[],
+    );
 
     const [commissions, feeTxns, earnings, payouts] = await Promise.all([
       paymentIds.length
@@ -747,7 +751,7 @@ export class PayoutService {
         : [],
       this.prisma.providerEarning.findMany({
         where: { ...(providerId ? { providerId } : {}), ...dateFilter() },
-        select: { id: true, bookingId: true, grossCents: true, commissionCents: true, feeCents: true, netCents: true, status: true },
+        select: { id: true, bookingId: true, orderId: true, grossCents: true, commissionCents: true, feeCents: true, netCents: true, status: true },
       }),
       this.prisma.payout.findMany({
         where: { ...(providerId ? { providerId } : {}), ...dateFilter() },
@@ -776,15 +780,17 @@ export class PayoutService {
       .reduce((s, x) => s + (x as any).totalCents, 0n);
     const payoutsTotal = payouts.reduce((s, x) => s + (x as any).totalCents, 0n);
 
-    // Referential integrity
+    // Referential integrity (booking- and order-linked alike)
     const commissionByPayment = new Set(commissions.map((c) => (c as any).paymentId));
-    const earningBookingIds = new Set(activeEarnings.map((e) => (e as any).bookingId).filter(Boolean));
+    const earningLinkIds = new Set(
+      activeEarnings.map((e) => (e as any).bookingId ?? (e as any).orderId).filter(Boolean),
+    );
     const orphanPaymentsMissingCommission = payments.filter((x) => !commissionByPayment.has(x.id)).map((x) => x.id);
     const orphanPaymentsMissingEarning = payments
-      .filter((x) => x.bookingId && !earningBookingIds.has(x.bookingId))
+      .filter((x) => ((x as any).bookingId ?? (x as any).orderId) && !earningLinkIds.has(((x as any).bookingId ?? (x as any).orderId) as string))
       .map((x) => x.id);
     const orphanEarningsWithoutPayment = activeEarnings
-      .filter((e) => (e as any).bookingId && !paymentBookingIds.has((e as any).bookingId))
+      .filter((e) => ((e as any).bookingId ?? (e as any).orderId) && !paymentLinkIds.has(((e as any).bookingId ?? (e as any).orderId) as string))
       .map((e) => (e as any).id);
 
     const discrepancy = paymentsTotal - commissionsTotal - totalFee - earningsNet;
