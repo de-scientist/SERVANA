@@ -48,8 +48,13 @@ export abstract class SimulatedPaymentProvider implements PaymentProvider {
       return false;
     }
     void rawBody;
-    if (!signature) return true;
-    return signature === process.env.MPESA_WEBHOOK_SECRET || signature === 'test-signature';
+    const configured = process.env.MPESA_WEBHOOK_SECRET;
+    if (configured) {
+      // A configured secret must match — even in dev/test. No backdoors.
+      return signature === configured;
+    }
+    // No secret configured (local dev only): accept unsigned callbacks.
+    return true;
   }
 
   async refund(req: PaymentRefundRequest): Promise<{ providerRef: string; status: string }> {
