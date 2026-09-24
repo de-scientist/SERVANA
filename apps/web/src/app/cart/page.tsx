@@ -83,7 +83,7 @@ export default function CartPage() {
                       {Object.entries(i.variantAttrs).map(([k, v]) => `${k}: ${String(v)}`).join(', ')}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground">{formatPrice(Number(i.unitCents) / 100, i.currency)} each</p>
+                  <p className="text-sm text-muted-foreground">{formatPrice(i.unitCents, i.currency)} each</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -94,14 +94,14 @@ export default function CartPage() {
                     onChange={(e) => setQty(i.id, Number(e.target.value))}
                     className="h-9 w-16 rounded-md border px-2 text-sm"
                   />
-                  <p className="w-24 text-right font-semibold">{formatPrice(Number(i.lineCents) / 100, i.currency)}</p>
+                  <p className="w-24 text-right font-semibold">{formatPrice(i.lineCents, i.currency)}</p>
                 </div>
               </li>
             ))}
           </ul>
           <div className="mt-4 flex items-center justify-between border-t pt-4">
             <p className="font-semibold">Subtotal</p>
-            <p className="text-xl font-bold">{formatPrice(Number(cart.subtotalCents) / 100, 'KES')}</p>
+            <p className="text-xl font-bold">{formatPrice(cart.subtotalCents, 'KES')}</p>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <select value={method} onChange={(e) => setMethod(e.target.value)} className="h-10 rounded-md border px-3 text-sm">
