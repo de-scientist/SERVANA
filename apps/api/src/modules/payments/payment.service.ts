@@ -467,9 +467,7 @@ export class PaymentService {
     // Finalize reservations: units leave stock exactly once. Reservations made
     // this impossible to oversell, so quantity covers qty by construction.
     for (const item of order.items) {
-      const row = await tx.inventory.findUnique({
-        where: { productId_variantId: { productId: item.productId, variantId: item.variantId ?? null } },
-      });
+      const row = await findInventoryRow(tx, item.productId, item.variantId ?? null);
       if (!row) continue;
       await tx.inventory.update({
         where: { id: row.id },
@@ -498,9 +496,7 @@ export class PaymentService {
     });
     if (!order || order.status !== 'PENDING') return;
     for (const item of order.items) {
-      const row = await tx.inventory.findUnique({
-        where: { productId_variantId: { productId: item.productId, variantId: item.variantId ?? null } },
-      });
+      const row = await findInventoryRow(tx, item.productId, item.variantId ?? null);
       if (!row) continue;
       await tx.inventory.update({
         where: { id: row.id },
