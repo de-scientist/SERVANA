@@ -86,11 +86,14 @@ describe('NotificationsService', () => {
     });
 
     it('falls back to synchronous delivery when the queue is down', async () => {
-      const prisma = makePrisma({
-        row: { id: 'n1', userId: 'u1', channel: 'EMAIL', subject: 's', body: 'b', status: 'PENDING', templateKey: 'k' },
-      });
-      prisma.notification.findUnique.mockResolvedValue({
-        id: 'n9', userId: 'u1', channel: 'EMAIL', subject: 's', body: 'b', status: 'PENDING', templateKey: 'k',
+      const prisma = makePrisma();
+      // First read (inside sendNow): PENDING row; second read (status refresh): SENT.
+      let reads = 0;
+      prisma.notification.findUnique.mockImplementation(async () => {
+        reads += 1;
+        return reads === 1
+          ? { id: 'n9', userId: 'u1', channel: 'EMAIL', subject: 's', body: 'b', status: 'PENDING', templateKey: 'k' }
+          : { id: 'n9', userId: 'u1', channel: 'EMAIL', subject: 's', body: 'b', status: 'SENT', templateKey: 'k' };
       });
       const queue = { add: jest.fn().mockResolvedValue(false) };
       const provider = { send: jest.fn().mockResolvedValue({ delivered: true }) };
