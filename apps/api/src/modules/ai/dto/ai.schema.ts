@@ -15,6 +15,32 @@ export const recommendProvidersSchema = z.object({
 });
 export type RecommendProvidersInput = z.infer<typeof recommendProvidersSchema>;
 
+export const recommendServicesSchema = z.object({
+  categoryId: z.string().uuid().optional(),
+  city: z.string().max(120).optional(),
+  maxPrice: z.coerce.number().positive().max(100_000_000).optional(),
+  limit: z.coerce.number().int().min(1).max(20).default(5),
+});
+export type RecommendServicesInput = z.infer<typeof recommendServicesSchema>;
+
+export const recommendProductsSchema = z.object({
+  categoryId: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(20).default(5),
+});
+export type RecommendProductsInput = z.infer<typeof recommendProductsSchema>;
+
+export const matchSchema = z.object({
+  query: z.string().trim().min(3).max(500),
+  limit: z.coerce.number().int().min(1).max(20).default(5),
+});
+export type MatchInput = z.infer<typeof matchSchema>;
+
+export const explainSchema = z.object({
+  itemType: z.enum(['provider', 'service', 'product']),
+  itemId: z.string().uuid(),
+});
+export type ExplainInput = z.infer<typeof explainSchema>;
+
 export const marketingDraftSchema = z.object({
   topic: z.string().trim().min(3).max(300),
   tone: z.enum(['Professional', 'Friendly', 'Luxury', 'Playful', 'Minimal']).default('Friendly'),

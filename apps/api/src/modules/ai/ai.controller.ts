@@ -4,11 +4,16 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { PrismaService } from '../prisma/prisma.service';
 import { AIService } from './ai.service';
 import { RecommendationService } from './recommendation.service';
+import { MatchingService } from './matching.service';
 import { ModerationService } from './moderation.service';
 import { AIAnalyticsService } from './ai-analytics.service';
 import { AIActionService } from './ai-action.service';
 import {
   recommendProvidersSchema,
+  recommendServicesSchema,
+  recommendProductsSchema,
+  matchSchema,
+  explainSchema,
   marketingDraftSchema,
   reviewInsightsSchema,
   moderateSchema,
@@ -25,6 +30,7 @@ export class AIController {
     private readonly prisma: PrismaService,
     private readonly ai: AIService,
     private readonly recommendations: RecommendationService,
+    private readonly matching: MatchingService,
     private readonly moderation: ModerationService,
     private readonly analytics: AIAnalyticsService,
     private readonly actions: AIActionService,
@@ -39,6 +45,44 @@ export class AIController {
     @Body(new ZodValidationPipe(recommendProvidersSchema)) body: any,
   ) {
     return { data: await this.recommendations.recommendProviders(user.sub, body) };
+  }
+
+  @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  @Post('ai/recommend/services')
+  async recommendServices(
+    @CurrentUser() user: Actor,
+    @Body(new ZodValidationPipe(recommendServicesSchema)) body: any,
+  ) {
+    return { data: await this.recommendations.recommendServices(user.sub, body) };
+  }
+
+  @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  @Post('ai/recommend/products')
+  async recommendProducts(
+    @CurrentUser() user: Actor,
+    @Body(new ZodValidationPipe(recommendProductsSchema)) body: any,
+  ) {
+    return { data: await this.recommendations.recommendProducts(user.sub, body) };
+  }
+
+  // --- smart matching: natural language → database rows (never invented) ----------
+
+  @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  @Post('ai/match')
+  async match(
+    @CurrentUser() user: Actor,
+    @Body(new ZodValidationPipe(matchSchema)) body: any,
+  ) {
+    return { data: await this.matching.match(user.sub, body.query, body.limit) };
+  }
+
+  @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  @Post('ai/recommend/explain')
+  async explain(
+    @CurrentUser() user: Actor,
+    @Body(new ZodValidationPipe(explainSchema)) body: any,
+  ) {
+    return { data: await this.matching.explain(user.sub, body.itemType, body.itemId) };
   }
 
   // --- provider intelligence -----------------------------------------------------------------

@@ -25,7 +25,7 @@ function recPrisma(opts: { pool?: any[]; bookings?: any[]; snapshots?: any[] } =
   } as any;
 }
 
-describe('RecommendationService (deterministic v1)', () => {
+describe('RecommendationService', () => {
   it('ranks quality first, boosts repeat providers, logs training events', async () => {
     const pool = [
       { id: 'p1', businessName: 'A', slug: 'a', verification: { status: 'VERIFIED' } },
@@ -71,6 +71,60 @@ describe('RecommendationService (deterministic v1)', () => {
 
     await svc.recommendProviders(null, { limit: 2 } as any);
     expect(prisma.recommendationEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('ranks bookable services by quality, affinity and budget fit', async () => {
+    const prisma = recPrisma();
+    (prisma as any).providerService = {
+      // Emulate Prisma budget filtering (priceCents.lte).
+      findMany: jest.fn().mockImplementation(async ({ where }: any) => {
+        const all = [
+          { id: 'ps1', serviceId: 'svc1', name: 'Braids', providerId: 'p1', priceCents: 200000n, provider: { id: 'p1', businessName: 'A' } },
+          { id: 'ps2', serviceId: 'svc2', name: 'Weave', providerId: 'p2', priceCents: 900000n, provider: { id: 'p2', businessName: 'B' } },
+        ];
+        if (where?.priceCents?.lte != null) return all.filter((s) => s.priceCents <= where.priceCents.lte);
+        return all;
+      }),
+    };
+    (prisma as any).providerRankingSnapshot = {
+      findMany: jest.fn().mockResolvedValue([
+        { providerId: 'p1', qualityScore: 80 },
+        { providerId: 'p2', qualityScore: 95 },
+      ]),
+    };
+    prisma.booking.findMany.mockResolvedValue([
+      { providerId: 'p1', providerServiceId: 'ps1', serviceId: 'svc1' },
+    ]);
+    const svc = new RecommendationService(prisma);
+
+    // p2 has higher raw quality but busts the 3000 budget → p1 wins.
+    const top = await svc.recommendServices('u1', { maxPrice: 3000, limit: 5 } as any);
+    expect(top).toHaveLength(1);
+    expect(top[0].providerServiceId).toBe('ps1');
+    expect(top[0].reasons).toContain('within budget');
+    expect(top[0].priceCents).toBe('200000');
+  });
+
+  it('ranks stocked affinity products first and never unstocked ones', async () => {
+    const prisma = recPrisma();
+    prisma.product = {
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'prod-aff', name: 'Oil', categoryId: 'cat-hair', saleCents: null, priceCents: 150000n, inventory: [{ quantity: 5, reserved: 0 }] },
+        { id: 'prod-out', name: 'Gone', categoryId: 'cat-hair', saleCents: null, priceCents: 100000n, inventory: [{ quantity: 0, reserved: 0 }] },
+        { id: 'prod-other', name: 'Soap', categoryId: 'cat-body', saleCents: 50000n, priceCents: 80000n, inventory: [{ quantity: 5, reserved: 0 }] },
+      ]),
+    };
+    prisma.order = {
+      findMany: jest.fn().mockResolvedValue([
+        { items: [{ product: { categoryId: 'cat-hair' } }] },
+      ]),
+    };
+    prisma.booking.findMany.mockResolvedValue([]);
+    const svc = new RecommendationService(prisma);
+
+    const top = await svc.recommendProducts('u1', { limit: 5 } as any);
+    expect(top.map((p) => p.productId)).toEqual(['prod-aff', 'prod-other']);
+    expect(top[0].reasons).toContain('matches your interests');
   });
 });
 

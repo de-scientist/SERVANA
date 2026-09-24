@@ -5,6 +5,7 @@ import { LoggingModule } from '../../common/logging/logging.module';
 import { AiModule } from '../../common/adapters/ai/ai.module';
 import { AIService } from './ai.service';
 import { RecommendationService } from './recommendation.service';
+import { MatchingService } from './matching.service';
 import { EmbeddingService } from './embedding.service';
 import { ModerationService } from './moderation.service';
 import { AIAnalyticsService } from './ai-analytics.service';
@@ -17,11 +18,12 @@ import { AIController } from './ai.controller';
   providers: [
     AIService,
     RecommendationService,
+    MatchingService,
     EmbeddingService,
     ModerationService,
     AIAnalyticsService,
     AIActionService,
   ],
-  exports: [AIService, RecommendationService, EmbeddingService, ModerationService, AIAnalyticsService, AIActionService],
+  exports: [AIService, RecommendationService, MatchingService, EmbeddingService, ModerationService, AIAnalyticsService, AIActionService],
 })
 export class AIModule {}
