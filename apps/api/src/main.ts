@@ -1,19 +1,42 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AppLoggerService } from './common/logging/logger.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
 
+function assertProductionSecrets(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+  const bad = [
+    'JWT_ACCESS_SECRET',
+    'JWT_REFRESH_SECRET',
+  ].filter((k) => {
+    const v = process.env[k] ?? '';
+    return v.length < 32 || v.startsWith('change_me');
+  });
+  if (bad.length > 0) {
+    throw new Error(
+      `Refusing to boot in production with weak/missing secrets: ${bad.join(', ')}`,
+    );
+  }
+}
+
 async function bootstrap(): Promise<void> {
   const logger = new AppLoggerService('Bootstrap');
+  assertProductionSecrets();
   const app = await NestFactory.create(AppModule, { logger });
   app.useLogger(logger);
+  app.use(helmet());
 
   const port = Number(process.env.API_PORT ?? 3001);
   const origins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
     .split(',')
-    .map((o) => o.trim());
+    .map((o) => o.trim())
+    .filter(Boolean);
+  if (process.env.NODE_ENV === 'production' && origins.some((o) => o === '*')) {
+    throw new Error('Refusing to boot in production with CORS origin *');
+  }
 
   app.setGlobalPrefix('api/v1');
   app.enableCors({ origin: origins, credentials: true });
