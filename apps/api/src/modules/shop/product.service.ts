@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { toMinorUnits, fromMinorUnits } from '../../common/money/money';
+import { findInventoryRow } from '../../common/inventory/inventory';
 import {
   CreateProductInput,
   UpdateProductInput,
@@ -241,11 +242,13 @@ export class ProductService {
       }
     }
 
-    const row = await this.prisma.inventory.upsert({
-      where: { productId_variantId: { productId, variantId: input.variantId ?? null } },
-      create: { productId, variantId: input.variantId ?? null, quantity: input.quantity, reserved: 0 },
-      update: { quantity: input.quantity },
-    });
+    const variantId = input.variantId ?? null;
+    const existing = await findInventoryRow(this.prisma, productId, variantId);
+    const row = existing
+      ? await this.prisma.inventory.update({ where: { id: existing.id }, data: { quantity: input.quantity } })
+      : await this.prisma.inventory.create({
+          data: { productId, variantId, quantity: input.quantity, reserved: 0 },
+        });
 
     if (row.reserved > row.quantity) {
       throw new BadRequestException(
