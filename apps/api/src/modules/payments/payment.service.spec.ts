@@ -30,6 +30,9 @@ function makePrisma() {
     payout: {
       upsert: jest.fn(),
     },
+    payoutItem: {
+      upsert: jest.fn(),
+    },
     loyaltyTier: {
       upsert: jest.fn(),
     },
@@ -61,9 +64,10 @@ function makePrisma() {
         },
         paymentTransaction: { create: jest.fn() },
         commission: { upsert: jest.fn() },
-        providerEarning: { upsert: jest.fn(), updateMany: jest.fn() },
+        providerEarning: { upsert: jest.fn().mockResolvedValue({ id: 'e1' }), updateMany: jest.fn() },
         payoutMethod: { findFirst: jest.fn(), create: jest.fn() },
-        payout: { upsert: jest.fn() },
+        payout: { upsert: jest.fn().mockResolvedValue({ id: 'po1' }) },
+        payoutItem: { upsert: jest.fn() },
         loyaltyTier: { upsert: jest.fn() },
         loyaltyAccount: { upsert: jest.fn(), update: jest.fn(), findFirst: jest.fn() },
         loyaltyTransaction: { findFirst: jest.fn(), create: jest.fn() },
@@ -235,9 +239,10 @@ describe('PaymentService', () => {
           },
           paymentTransaction: { create: jest.fn() },
           commission: { upsert: jest.fn() },
-          providerEarning: { upsert: jest.fn() },
+          providerEarning: { upsert: jest.fn().mockResolvedValue({ id: 'e1' }) },
           payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm_default', type: 'MPESA', isDefault: true }), create: jest.fn() },
-          payout: { upsert: jest.fn() },
+          payout: { upsert: jest.fn().mockResolvedValue({ id: 'po1' }) },
+          payoutItem: { upsert: jest.fn() },
           loyaltyTier: { upsert: jest.fn() },
           loyaltyAccount: { upsert: jest.fn().mockResolvedValue({ id: 'la1', customerId: 'cust1', balanceCents: 0n }), update: jest.fn() },
           loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() },
@@ -447,9 +452,10 @@ describe('PaymentService', () => {
           },
           paymentTransaction: { create: jest.fn() },
           commission: { upsert: jest.fn() },
-          providerEarning: { upsert: jest.fn() },
+          providerEarning: { upsert: jest.fn().mockResolvedValue({ id: 'e1' }) },
           payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm_default', type: 'MPESA', isDefault: true }), create: jest.fn() },
-          payout: { upsert: jest.fn() },
+          payout: { upsert: jest.fn().mockResolvedValue({ id: 'po1' }) },
+          payoutItem: { upsert: jest.fn() },
           loyaltyTier: { upsert: jest.fn() },
           loyaltyAccount: { upsert: jest.fn().mockResolvedValue({ id: 'la1', customerId: 'cust1', balanceCents: 0n }), update: jest.fn() },
           loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() },
@@ -468,6 +474,13 @@ describe('PaymentService', () => {
       expect(capturedTx.commission.upsert).toHaveBeenCalled();
       expect(capturedTx.providerEarning.upsert).toHaveBeenCalled();
       expect(capturedTx.payout.upsert).toHaveBeenCalled();
+      // No money may disappear between earning and payout: the auto-payout
+      // must link its earning via a PayoutItem.
+      expect(capturedTx.payoutItem.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { payoutId_earningId: { payoutId: 'po1', earningId: 'e1' } },
+        }),
+      );
     });
 
     it('awards loyalty points on success', async () => {
@@ -495,9 +508,10 @@ describe('PaymentService', () => {
           },
           paymentTransaction: { create: jest.fn() },
           commission: { upsert: jest.fn() },
-          providerEarning: { upsert: jest.fn() },
+          providerEarning: { upsert: jest.fn().mockResolvedValue({ id: 'e1' }) },
           payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm_default', type: 'MPESA', isDefault: true }), create: jest.fn() },
-          payout: { upsert: jest.fn() },
+          payout: { upsert: jest.fn().mockResolvedValue({ id: 'po1' }) },
+          payoutItem: { upsert: jest.fn() },
           loyaltyTier: { upsert: jest.fn() },
           loyaltyAccount: { upsert: jest.fn().mockResolvedValue({ id: 'la1', customerId: 'cust1', balanceCents: 0n }), update: jest.fn() },
           loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() },
@@ -540,9 +554,10 @@ describe('PaymentService', () => {
           },
           paymentTransaction: { create: jest.fn() },
           commission: { upsert: jest.fn() },
-          providerEarning: { upsert: jest.fn() },
+          providerEarning: { upsert: jest.fn().mockResolvedValue({ id: 'e1' }) },
           payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm_default', type: 'MPESA', isDefault: true }), create: jest.fn() },
-          payout: { upsert: jest.fn() },
+          payout: { upsert: jest.fn().mockResolvedValue({ id: 'po1' }) },
+          payoutItem: { upsert: jest.fn() },
           loyaltyTier: { upsert: jest.fn() },
           loyaltyAccount: { upsert: jest.fn().mockResolvedValue({ id: 'la1', customerId: 'cust1', balanceCents: 0n }), update: jest.fn() },
           loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue({ id: 'lt1' }), create: jest.fn() },

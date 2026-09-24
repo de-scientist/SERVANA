@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { formatPrice } from '@/lib/api';
-
 interface FailedPayout {
   id: string;
   providerId: string;
@@ -22,16 +21,35 @@ export default function FailedPayoutsPage() {
   const [payouts, setPayouts] = useState<FailedPayout[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    apiClient.get<{ data: FailedPayout[] }>('/payments/payouts/failed')
+    // GET /payments/payouts/failed responds with the admin dashboard payload
+    // ({ payouts, summary, failedPayouts }, possibly wrapped in { data, meta }).
+    apiClient.get<unknown>('/payments/payouts/failed')
       .then((res) => {
         if (res.error) { setError(res.error.message); setPayouts([]); }
-        else { setPayouts((res.data as { data: FailedPayout[] }).data ?? []); }
+        else {
+          const raw = res.data as { failedPayouts?: FailedPayout[]; data?: { failedPayouts?: FailedPayout[] } } | null;
+          const list = raw?.failedPayouts ?? raw?.data?.failedPayouts ?? [];
+          setPayouts(Array.isArray(list) ? list : []);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
+
+  async function retryPayout(id: string) {
+    setRetryingId(id);
+    setError(null);
+    const res = await apiClient.post<unknown>(`/payments/payouts/${id}/retry`);
+    setRetryingId(null);
+    if (res.error) {
+      setError(res.error.message);
+      return;
+    }
+    setPayouts((prev) => prev.filter((p) => p.id !== id));
+  }
 
   if (loading) return <main className="mx-auto max-w-5xl px-4 py-10"><p className="text-sm text-muted-foreground">Loading failed payouts…</p></main>;
   if (error) return <main className="mx-auto max-w-5xl px-4 py-10"><p className="text-sm text-red-600">{error}</p></main>;
@@ -52,7 +70,7 @@ export default function FailedPayoutsPage() {
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">FAILED</span>
             </div>
             <div className="mt-3 flex gap-2">
-              <button onClick={() => router.push(`/payments/payouts/${p.id}/retry`)} className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground">Retry</button>
+              <button onClick={() => retryPayout(p.id)} disabled={retryingId === p.id} className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50">{retryingId === p.id ? 'Retrying…' : 'Retry'}</button>
               <button onClick={() => router.push(`/admin/payouts/transactions/${p.id}`)} className="rounded-md border px-3 py-1.5 text-xs">View Details</button>
             </div>
           </li>

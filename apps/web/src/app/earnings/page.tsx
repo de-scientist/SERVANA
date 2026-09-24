@@ -6,16 +6,26 @@ import { formatPrice } from '@/lib/api';
 
 interface EarningsDashboard {
   providerId: string;
-  totalGrossCents: string;
-  totalCommissionCents: string;
-  totalPaymentFeesCents: string;
-  totalRefundCents: string;
-  totalAdjustmentCents: string;
-  totalNetCents: string;
-  totalEarningsCents: string;
-  totalPaidOutCents: string;
+  currency?: string;
+  // Canonical Phase-7 names
+  grossEarningsCents?: string;
+  platformCommissionCents?: string;
+  paymentFeesCents?: string;
+  refundsCents?: string;
+  adjustmentsCents?: string;
   pendingEarningsCents: string;
   availableEarningsCents: string;
+  paidEarningsCents?: string;
+  paidOutCents?: string;
+  // Legacy aliases (still returned by the API)
+  totalGrossCents?: string;
+  totalCommissionCents?: string;
+  totalPaymentFeesCents?: string;
+  totalRefundCents?: string;
+  totalAdjustmentCents?: string;
+  totalNetCents?: string;
+  totalEarningsCents?: string;
+  totalPaidOutCents?: string;
 }
 
 export default function ProviderEarningsPage() {
@@ -43,19 +53,27 @@ export default function ProviderEarningsPage() {
     </div>
   );
 
+  const gross = dashboard.grossEarningsCents ?? dashboard.totalGrossCents ?? '0';
+  const commission = dashboard.platformCommissionCents ?? dashboard.totalCommissionCents ?? '0';
+  const fees = dashboard.paymentFeesCents ?? dashboard.totalPaymentFeesCents ?? '0';
+  const refunds = dashboard.refundsCents ?? dashboard.totalRefundCents ?? '0';
+  const adjustments = dashboard.adjustmentsCents ?? dashboard.totalAdjustmentCents ?? '0';
+  const paid = dashboard.paidEarningsCents ?? dashboard.paidOutCents ?? dashboard.totalPaidOutCents ?? '0';
+  const net = dashboard.totalNetCents ?? dashboard.totalEarningsCents ?? '0';
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="text-2xl font-bold">Provider Earnings</h1>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {metric('Gross Earnings', dashboard.totalGrossCents)}
-        {metric('Platform Commission', `-${dashboard.totalCommissionCents}`)}
-        {metric('Payment Fees', `-${dashboard.totalPaymentFeesCents}`)}
-        {metric('Refunds', `-${dashboard.totalRefundCents}`)}
-        {metric('Adjustments', dashboard.totalAdjustmentCents)}
+        {metric('Gross Earnings', gross)}
+        {metric('Platform Commission', `-${commission}`)}
+        {metric('Payment Fees', `-${fees}`)}
+        {metric('Refunds', `-${refunds}`)}
+        {metric('Adjustments', adjustments)}
         {metric('Pending Earnings', dashboard.pendingEarningsCents)}
         {metric('Available Earnings', dashboard.availableEarningsCents)}
-        {metric('Paid Out', dashboard.totalPaidOutCents)}
-        {metric('Net Earnings', dashboard.totalNetCents)}
+        {metric('Paid Earnings', paid)}
+        {metric('Net Earnings', net)}
       </div>
     </main>
   );

@@ -188,7 +188,7 @@ export class PaymentService {
         });
 
         // Provider earning (idempotent via unique bookingId).
-        await tx.providerEarning.upsert({
+        const earning = await tx.providerEarning.upsert({
           where: { bookingId: booking.id },
           create: {
             providerId: booking.providerId,
@@ -208,8 +208,11 @@ export class PaymentService {
         });
 
         // Payout to provider (idempotent via unique reference).
+        // The payout MUST link to its earning(s) via PayoutItem — otherwise
+        // money would disappear between the earning and payout stages and
+        // reconciliation could never prove ledger integrity.
         const payoutMethod = await this.ensurePayoutMethod(tx, booking.providerId);
-        await tx.payout.upsert({
+        const payout = await tx.payout.upsert({
           where: { reference: `PO_${payment.id}` },
           create: {
             providerId: booking.providerId,
@@ -218,6 +221,15 @@ export class PaymentService {
             totalCents: netCents,
             currency: payment.currency,
             reference: `PO_${payment.id}`,
+          },
+          update: {},
+        });
+        await tx.payoutItem.upsert({
+          where: { payoutId_earningId: { payoutId: payout.id, earningId: earning.id } },
+          create: {
+            payoutId: payout.id,
+            earningId: earning.id,
+            amountCents: netCents,
           },
           update: {},
         });

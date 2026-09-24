@@ -617,26 +617,10 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       expect(list.status).toBe(403);
     });
   });
-<<<<<<< HEAD
-
-  describe('payouts', () => {
-    it('admin can create a manual payout', async () => {
-      const superAdminEmail = `payoutadmin_${Date.now()}@example.com`;
-      const reg = await auth.register({ email: superAdminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
-
-      const create = await call('POST', '/payments/payouts', reg.tokens.accessToken, {
-        providerId: 'prov1',
-        methodId: 'm1',
-        totalCents: 180000,
-        currency: 'KES',
-      });
-      expect(create.status).toBe(201);
-      expect(create.body.data.status).toBe('PENDING');
-    });
-
+<  describe('payouts', () => {
     it('provider can view their earnings dashboard', async () => {
       const cust = await register('CUSTOMER', `pcust_${Date.now()}@example.com`);
-      const { serviceId } = await setupVerifiedProvider(`pprov_${Date.now()}@example.com`);
+      const { prov, serviceId } = await setupVerifiedProvider(`pprov_${Date.now()}@example.com`);
       const startsAt = futureIso(15);
 
       const booking = await call('POST', '/bookings', cust.accessToken, {
@@ -648,14 +632,14 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
       await webhook('mpesa', { providerRef: payRes.body.data.providerRef, status: 'SUCCESSFUL', amount: '200000', currency: 'KES' });
 
-      const dashboard = await call('GET', '/payments/payouts/dashboard', cust.accessToken);
+      const dashboard = await call('GET', '/payments/payouts/earnings', prov.accessToken);
       expect(dashboard.status).toBe(200);
-      expect(dashboard.body.data.totalGrossCents).toBe('200000');
+      expect(dashboard.body.data.grossEarningsCents ?? dashboard.body.data.totalGrossCents).toBe('200000');
     });
 
     it('provider can view payout list', async () => {
       const cust = await register('CUSTOMER', `pcust2_${Date.now()}@example.com`);
-      const { serviceId } = await setupVerifiedProvider(`pprov2_${Date.now()}@example.com`);
+      const { prov, serviceId } = await setupVerifiedProvider(`pprov2_${Date.now()}@example.com`);
       const startsAt = futureIso(16);
 
       const booking = await call('POST', '/bookings', cust.accessToken, {
@@ -667,14 +651,55 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
       await webhook('mpesa', { providerRef: payRes.body.data.providerRef, status: 'SUCCESSFUL', amount: '200000', currency: 'KES' });
 
-      const list = await call('GET', '/payments/payouts', cust.accessToken);
+      const list = await call('GET', '/payments/payouts', prov.accessToken);
       expect(list.status).toBe(200);
-      expect(list.body.data.length).toBeGreaterThanOrEqual(0);
+      expect(list.body.data.data.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('admin can view reconciliation', async () => {
+    it('admin can create a manual payout backed by AVAILABLE earnings', async () => {
+      const superAdminEmail = `payoutadmin_${Date.now()}@example.com`;
+      const reg = await auth.register({ email: superAdminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+      const cust = await register('CUSTOMER', `pcustm_${Date.now()}@example.com`);
+      const { prov, serviceId } = await setupVerifiedProvider(`pprovm_${Date.now()}@example.com`);
+
+      const booking = await call('POST', '/bookings', cust.accessToken, {
+        providerServiceId: serviceId,
+        startsAt: futureIso(17),
+        deliveryType: 'AT_PROVIDER_LOCATION',
+      });
+      const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
+      await webhook('mpesa', { providerRef: payRes.body.data.providerRef, status: 'SUCCESSFUL', amount: '200000', currency: 'KES' });
+
+      const method = await call('POST', '/payments/payouts/methods', prov.accessToken, {
+        type: 'MPESA',
+        detailsRef: '0712345678',
+      });
+      expect(method.status).toBe(201);
+
+      const earning = await prisma.providerEarning.findFirst({ where: { bookingId: booking.body.data.id } });
+      expect(earning).toBeDefined();
+
+      const earningProviderId = earning!.providerId;
+      const methodRow = await prisma.payoutMethod.findFirst({ where: { providerId: earningProviderId }, orderBy: { createdAt: 'desc' } });
+      expect(methodRow).toBeDefined();
+
+      const create = await call('POST', '/payments/payouts', reg.tokens.accessToken, {
+        providerId: earningProviderId,
+        methodId: methodRow!.id,
+        earningIds: [earning!.id],
+        currency: 'KES',
+      });
+      expect(create.status).toBe(201);
+      expect(create.body.data.status).toBe('PENDING');
+    });
+
+    it('admin can view payout dashboard and reconciliation', async () => {
       const superAdminEmail = `recon_${Date.now()}@example.com`;
       const reg = await auth.register({ email: superAdminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+
+      const dashboard = await call('GET', '/payments/payouts/dashboard', reg.tokens.accessToken);
+      expect(dashboard.status).toBe(200);
+      expect(dashboard.body.data.data.summary).toBeDefined();
 
       const result = await call('GET', '/payments/payouts/reconciliation', reg.tokens.accessToken);
       expect(result.status).toBe(200);
@@ -689,10 +714,8 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
 
     it('customer cannot view earnings dashboard', async () => {
       const cust = await register('CUSTOMER', `pcust4_${Date.now()}@example.com`);
-      const dashboard = await call('GET', '/payments/payouts/dashboard', cust.accessToken);
+      const dashboard = await call('GET', '/payments/payouts/earnings', cust.accessToken);
       expect(dashboard.status).toBe(403);
     });
   });
-=======
->>>>>>> origin/main
 });

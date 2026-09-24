@@ -260,9 +260,9 @@ describe('PayoutService', () => {
       expect(result.status).toBe('FAILED');
     });
 
-    it('throws BadRequestException for non-PROCESSING payout', async () => {
+    it('throws BadRequestException for settled payouts (only PENDING/PROCESSING can fail)', async () => {
       const prisma = makePrisma();
-      prisma.payout.findUnique.mockResolvedValue({ id: 'p1', status: 'PENDING' });
+      prisma.payout.findUnique.mockResolvedValue({ id: 'p1', status: 'SUCCESSFUL' });
       const svc = service(prisma);
 
       await expect(svc.failPayout({ sub: 'admin1', role: 'ADMIN' }, 'p1', 'Test')).rejects.toBeInstanceOf(BadRequestException);
@@ -287,7 +287,10 @@ describe('PayoutService', () => {
             update: jest.fn().mockResolvedValue({ id: 'p1', status: 'REVERSED', totalCents: 180000n, currency: 'KES', reference: 'PO_1', providerId: 'prov1', retryCount: 0, failedCount: 0 }),
             findUnique: jest.fn().mockResolvedValue({ id: 'p1', providerId: 'prov1', status: 'REVERSED', totalCents: 180000n, currency: 'KES', reference: 'PO_1', retryCount: 0, failedCount: 0, items: [{ id: 'pi1', earningId: 'e1', amountCents: 180000n }] }),
           },
-          providerEarning: { update: jest.fn().mockResolvedValue({ id: 'e1', status: 'AVAILABLE' }) },
+          providerEarning: {
+            findUnique: jest.fn().mockResolvedValue({ id: 'e1', status: 'PAID' }),
+            update: jest.fn().mockResolvedValue({ id: 'e1', status: 'AVAILABLE' }),
+          },
           paymentTransaction: { create: jest.fn() },
           auditLog: { create: jest.fn() },
         };
@@ -346,11 +349,15 @@ describe('PayoutService', () => {
   describe('reconcile', () => {
     it('returns reconciliation data with ledger integrity', async () => {
       const prisma = makePrisma();
-      prisma.payment.findMany.mockResolvedValue([{ grossCents: 200000n }]);
-      prisma.commission.findMany.mockResolvedValue([{ commissionCents: 20000n }]);
+      prisma.payment.findMany.mockResolvedValue([
+        { id: 'pay1', bookingId: 'b1', grossCents: 200000n, feeCents: 0n, commissionCents: 20000n },
+      ]);
+      prisma.commission.findMany.mockResolvedValue([{ paymentId: 'pay1', commissionCents: 20000n }]);
       prisma.paymentTransaction.findMany.mockResolvedValue([]);
-      prisma.providerEarning.findMany.mockResolvedValue([{ netCents: 180000n }]);
-      prisma.payout.findMany.mockResolvedValue([{ totalCents: 180000n, status: 'SUCCESSFUL' }]);
+      prisma.providerEarning.findMany.mockResolvedValue([
+        { id: 'e1', bookingId: 'b1', grossCents: 200000n, commissionCents: 20000n, feeCents: 0n, netCents: 180000n, adjustmentCents: 0n, status: 'AVAILABLE' },
+      ]);
+      prisma.payout.findMany.mockResolvedValue([{ id: 'p1', totalCents: 180000n, status: 'SUCCESSFUL' }]);
       const svc = service(prisma);
 
       const result = await svc.reconcile({ sub: 'admin1', role: 'ADMIN' }, { providerId: 'prov1' });
@@ -359,15 +366,23 @@ describe('PayoutService', () => {
       expect(result.paymentsTotalCents).toBe('200000');
       expect(result.discrepancyCents).toBe('0');
       expect(result.ledgerIntact).toBe(true);
+      expect(result.orphanPaymentsMissingCommission).toEqual([]);
+      expect(result.orphanPaymentsMissingEarning).toEqual([]);
+      expect(result.orphanEarningsWithoutPayment).toEqual([]);
+      expect(result.overPayoutCents).toBe('0');
     });
 
     it('detects ledger discrepancy', async () => {
       const prisma = makePrisma();
-      prisma.payment.findMany.mockResolvedValue([{ grossCents: 200000n }]);
-      prisma.commission.findMany.mockResolvedValue([{ commissionCents: 20000n }]);
+      prisma.payment.findMany.mockResolvedValue([
+        { id: 'pay1', bookingId: 'b1', grossCents: 200000n, feeCents: 0n, commissionCents: 20000n },
+      ]);
+      prisma.commission.findMany.mockResolvedValue([{ paymentId: 'pay1', commissionCents: 20000n }]);
       prisma.paymentTransaction.findMany.mockResolvedValue([]);
-      prisma.providerEarning.findMany.mockResolvedValue([{ netCents: 150000n }]);
-      prisma.payout.findMany.mockResolvedValue([{ totalCents: 150000n, status: 'SUCCESSFUL' }]);
+      prisma.providerEarning.findMany.mockResolvedValue([
+        { id: 'e1', bookingId: 'b1', grossCents: 200000n, commissionCents: 20000n, feeCents: 0n, netCents: 150000n, adjustmentCents: 0n, status: 'AVAILABLE' },
+      ]);
+      prisma.payout.findMany.mockResolvedValue([{ id: 'p1', totalCents: 150000n, status: 'SUCCESSFUL' }]);
       const svc = service(prisma);
 
       const result = await svc.reconcile({ sub: 'admin1', role: 'ADMIN' }, { providerId: 'prov1' });
@@ -404,16 +419,22 @@ describe('PayoutService', () => {
       prisma.payout.findUnique.mockResolvedValue({
         id: 'p1', providerId: 'prov1', status: 'SUCCESSFUL', totalCents: 180000n, currency: 'KES',
         reference: 'PO_1', retryCount: 0, failedCount: 0,
-        items: [{ id: 'pi1', earningId: 'e1', earning: { status: 'PAID' } }],
+        items: [{ id: 'pi1', earningId: 'e1', amountCents: 180000n, earning: { status: 'PAID', bookingId: 'b1', grossCents: 200000n, netCents: 180000n } }],
         method: { type: 'MPESA', detailsRef: '411***1234' },
-        transactions: [{ id: 't1', type: 'ADJUSTMENT', amountCents: 5000n, currency: 'KES', createdAt: new Date() }],
       });
+      prisma.payment.findMany.mockResolvedValue([
+        { id: 'pay1', bookingId: 'b1', status: 'SUCCESSFUL', grossCents: 200000n, commissionCents: 20000n, netCents: 180000n, currency: 'KES' },
+      ]);
+      prisma.paymentTransaction.findMany.mockResolvedValue([
+        { id: 't1', paymentId: 'pay1', type: 'CAPTURE', amountCents: 200000n, currency: 'KES', createdAt: new Date() },
+      ]);
       const svc = service(prisma);
 
       const result = await svc.getTransactionDetail({ sub: 'prov1', role: 'PROVIDER' }, 'p1');
 
       expect(result.status).toBe('SUCCESSFUL');
       expect(result.transactions).toHaveLength(1);
+      expect(result.relatedPayments).toHaveLength(1);
       expect(result.method?.type).toBe('MPESA');
     });
   });

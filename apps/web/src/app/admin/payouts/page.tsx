@@ -23,6 +23,8 @@ interface PayoutSummary {
   failedCount: number;
   successfulCount: number;
   pendingCount: number;
+  processingCount?: number;
+  reversedCount?: number;
 }
 
 interface AdminDashboardData {
@@ -39,17 +41,26 @@ export default function AdminPayoutDashboard() {
 
   useEffect(() => {
     const params = statusFilter ? `?status=${statusFilter}` : '';
-    apiClient.get<AdminDashboardData>(`/payments/payouts/dashboard${params}`)
+    // GET /payments/payouts/dashboard responds { data: { payouts, summary, failedPayouts }, meta },
+    // and apiClient already unwraps the outer { data }, so res.data may be
+    // either the inner payload or { data, meta }. Handle both shapes.
+    apiClient.get<AdminDashboardData | { data: AdminDashboardData }>(`/payments/payouts/dashboard${params}`)
       .then((res) => {
         if (res.error) { setError(res.error.message); setData(null); }
-        else { setData(res.data as AdminDashboardData); }
+        else {
+          const raw = res.data as AdminDashboardData | { data: AdminDashboardData } | null;
+          const inner = raw && 'data' in (raw as object) && (raw as { data: AdminDashboardData }).data?.payouts
+            ? (raw as { data: AdminDashboardData }).data
+            : (raw as AdminDashboardData);
+          setData(inner);
+        }
       })
       .finally(() => setLoading(false));
   }, [statusFilter]);
 
   if (loading) return <main className="mx-auto max-w-5xl px-4 py-10"><p className="text-sm text-muted-foreground">Loading payout dashboard…</p></main>;
   if (error) return <main className="mx-auto max-w-5xl px-4 py-10"><p className="text-sm text-red-600">{error}</p></main>;
-  if (!data) return null;
+  if (!data || !Array.isArray((data as AdminDashboardData).payouts)) return <main className="mx-auto max-w-5xl px-4 py-10"><p className="text-sm text-muted-foreground">No payout data available.</p></main>;
 
   const statusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -80,7 +91,7 @@ export default function AdminPayoutDashboard() {
         <h2 className="text-lg font-semibold">All Payouts</h2>
         <div className="mt-2 overflow-x-auto">
           <table className="w-full border-collapse text-sm">
-            <thead><tr className="border-b"><th className="p-2 text-left">Reference</th><th className="p-2 text-left">Status</th><th className="p-2 text-left">Amount</th><th className="p-2 text-left">Method</th><th className="p-2 text-left">Created</th></tr></thead>
+            <thead><tr className="border-b"><th className="p-2 text-left">Reference</th><th className="p-2 text-left">Status</th><th className="p-2 text-left">Amount</th><th className="p-2 text-left">Method</th><th className="p-2 text-left">Created</th><th className="p-2 text-left">Detail</th></tr></thead>
             <tbody>
               {data.payouts.map((p) => (
                 <tr key={p.id} className="border-b">
@@ -89,6 +100,7 @@ export default function AdminPayoutDashboard() {
                   <td className="p-2">{formatPrice(p.totalCents, p.currency)}</td>
                   <td className="p-2">{p.method?.type ?? '—'}</td>
                   <td className="p-2">{new Date(p.createdAt).toLocaleDateString()}</td>
+                  <td className="p-2"><a className="underline" href={`/admin/payouts/transactions/${p.id}`}>View</a></td>
                 </tr>
               ))}
             </tbody>

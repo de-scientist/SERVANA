@@ -19,6 +19,14 @@ interface ReconciliationResult {
   ledgerIntact: boolean;
   dateFrom: string;
   dateTo: string;
+  refundsTotalCents?: string;
+  adjustmentsTotalCents?: string;
+  payoutsSuccessfulCents?: string;
+  payoutsPendingCents?: string;
+  orphanPaymentsMissingCommission?: string[];
+  orphanPaymentsMissingEarning?: string[];
+  orphanEarningsWithoutPayment?: string[];
+  overPayoutCents?: string;
 }
 
 export default function ReconciliationPage() {
@@ -41,6 +49,11 @@ export default function ReconciliationPage() {
       })
       .finally(() => setLoading(false));
   }
+
+  useEffect(() => {
+    runReconciliation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -65,6 +78,15 @@ export default function ReconciliationPage() {
             <div className="rounded-lg border bg-card p-4"><p className="text-xs text-muted-foreground">Payouts</p><p className="mt-1 font-bold">{result.payoutCount} · {formatPrice(result.payoutTotalCents)}</p></div>
             <div className="rounded-lg border bg-card p-4"><p className="text-xs text-muted-foreground">Discrepancy</p><p className={`mt-1 font-bold ${result.discrepancyCents !== '0' ? 'text-red-600' : 'text-green-600'}`}>{formatPrice(result.discrepancyCents)}</p></div>
           </div>
+          {(result.overPayoutCents !== undefined || result.orphanPaymentsMissingCommission !== undefined) && (
+            <div className="rounded-lg border bg-card p-4 text-sm">
+              <p className="font-semibold">Referential checks</p>
+              <p className="mt-1 text-muted-foreground">Over-payout: {result.overPayoutCents !== undefined ? formatPrice(result.overPayoutCents) : '—'}</p>
+              <p className="text-muted-foreground">Payments missing commission: {(result.orphanPaymentsMissingCommission ?? []).length}</p>
+              <p className="text-muted-foreground">Payments missing earning: {(result.orphanPaymentsMissingEarning ?? []).length}</p>
+              <p className="text-muted-foreground">Earnings without payment: {(result.orphanEarningsWithoutPayment ?? []).length}</p>
+            </div>
+          )}
         </div>
       )}
     </main>
