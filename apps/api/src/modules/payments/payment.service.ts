@@ -547,14 +547,12 @@ export class PaymentService {
           });
           // Sold units go back to stock (capture had deducted them).
           const order = await tx.order.findUnique({
-            where: { id: p.orderId },
+            where: { id: p.orderId as string },
             include: { items: true },
           });
           if (order) {
             for (const item of order.items) {
-              const row = await tx.inventory.findUnique({
-                where: { productId_variantId: { productId: item.productId, variantId: item.variantId ?? null } },
-              });
+              const row = await findInventoryRow(tx, item.productId, item.variantId ?? null);
               if (!row) continue;
               await tx.inventory.update({
                 where: { id: row.id },

@@ -7,11 +7,7 @@
  * (IS NULL) instead of the compound unique key.
  */
 export async function findInventoryRow(
-  db: {
-    inventory: {
-      findFirst: (args: unknown) => Promise<any>;
-    };
-  },
+  db: any,
   productId: string,
   variantId: string | null,
 ): Promise<any> {
