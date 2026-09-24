@@ -6,13 +6,13 @@ import { AppLoggerService } from './common/logging/logger.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
 
-function assertProductionSecrets(): void {
-  if (process.env.NODE_ENV !== 'production') return;
+export function assertProductionSecrets(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.NODE_ENV !== 'production') return;
   const bad = [
     'JWT_ACCESS_SECRET',
     'JWT_REFRESH_SECRET',
   ].filter((k) => {
-    const v = process.env[k] ?? '';
+    const v = env[k] ?? '';
     return v.length < 32 || v.startsWith('change_me');
   });
   if (bad.length > 0) {
