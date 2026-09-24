@@ -129,12 +129,12 @@ describe('AIService (gateway)', () => {
     prisma.aiRequestLog.findMany.mockResolvedValue([{ costCents: 150n }]);
     const provider = makeProvider();
     const s = new AIService(prisma, makeAudit(), provider);
-    delete process.env.AI_MONTHLY_COST_CENTS_CAP;
 
     await expect(
       s.complete({ actorId: 'u1', feature: 't', system: 's', input: 'hello' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(provider.complete).not.toHaveBeenCalled();
+    delete process.env.AI_MONTHLY_COST_CENTS_CAP;
   });
 
   it('fails open when cost accounting itself errors', async () => {
