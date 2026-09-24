@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, BookingStatus, ServiceDeliveryType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReferralService } from '../loyalty/referral.service';
 import {
   assertTransition,
   cancelsBooking,
@@ -34,7 +35,10 @@ interface CancellationPolicy {
 
 @Injectable()
 export class BookingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly referrals: ReferralService,
+  ) {}
 
   async create(actor: BookingActor, input: CreateBookingInput) {
     const ps = await this.prisma.providerService.findUnique({
@@ -205,6 +209,10 @@ export class BookingService {
     await this.prisma.bookingStatusHistory.create({
       data: { bookingId: id, from: b.status, to, actorId: actor.sub, actorRole: 'PROVIDER', reason },
     });
+    // Retention: a first completed + paid booking qualifies a pending referral.
+    if (to === 'COMPLETED') {
+      await this.referrals.qualifyOnBookingComplete(id);
+    }
     return this.mapBooking(id);
   }
 

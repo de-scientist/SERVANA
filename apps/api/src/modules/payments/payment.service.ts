@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentGateway } from './payment.gateway';
 import { CommissionService } from './commission.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import { findInventoryRow } from '../../common/inventory/inventory';
 import { PaymentMethod, PaymentWebhookEvent } from '../../common/adapters/payment/payment.provider';
 import { BookingStatus } from '@prisma/client';
@@ -31,7 +32,6 @@ const PAYABLE_STATUSES: BookingStatus[] = [
   'PAID',
 ];
 
-const LOYALTY_TIER_ID = 'default';
 const PAYOUT_EXPIRY_MINUTES = Number(process.env.PAYMENT_EXPIRY_MINUTES ?? 30);
 
 @Injectable()
@@ -40,6 +40,7 @@ export class PaymentService {
     private readonly prisma: PrismaService,
     private readonly gateway: PaymentGateway,
     private readonly commission: CommissionService,
+    private readonly loyalty: LoyaltyService,
   ) {}
 
   // --- initiate -------------------------------------------------------------
@@ -353,7 +354,7 @@ export class PaymentService {
         });
 
         // Loyalty (idempotent via refType/refId guard).
-        await this.awardLoyalty(tx, booking.customerId, payment.id, payment.grossCents);
+        await this.awardLoyalty(tx, booking.customerId, payment.id, 'BOOKING');
 
         // Confirm the booking financially.
         if (booking.status === 'PENDING' || booking.status === 'AWAITING_PAYMENT') {
@@ -478,7 +479,7 @@ export class PaymentService {
       });
     }
 
-    await this.awardLoyalty(tx, order.customerId, payment.id, payment.grossCents);
+    await this.awardLoyalty(tx, order.customerId, payment.id, 'PURCHASE');
 
     if (order.status === 'PENDING') {
       await tx.order.update({ where: { id: order.id }, data: { status: 'PAID' } });
@@ -655,34 +656,10 @@ export class PaymentService {
     tx: Prisma.TransactionClient,
     customerId: string,
     paymentId: string,
-    grossCents: bigint,
+    kind: 'BOOKING' | 'PURCHASE',
   ) {
-    const existing = await tx.loyaltyTransaction.findFirst({ where: { refType: 'PAYMENT', refId: paymentId } });
-    if (existing) return; // idempotent
-
-    await tx.loyaltyTier.upsert({
-      where: { id: LOYALTY_TIER_ID },
-      update: {},
-      create: { id: LOYALTY_TIER_ID, name: 'Standard', thresholdCents: 0n },
-    });
-
-    const account = await tx.loyaltyAccount.upsert({
-      where: { customerId },
-      update: {},
-      create: { customerId, tierId: LOYALTY_TIER_ID, balanceCents: 0n },
-    });
-
-    await tx.loyaltyTransaction.create({
-      data: {
-        accountId: account.id,
-        type: 'EARN_BOOKING',
-        deltaCents: grossCents,
-        reason: 'Booking payment',
-        refType: 'PAYMENT',
-        refId: paymentId,
-      },
-    });
-    await tx.loyaltyAccount.update({ where: { id: account.id }, data: { balanceCents: { increment: grossCents } } });
+    // Rule-based points via the loyalty engine (idempotent per payment).
+    await this.loyalty.earnFromPayment(tx, { userId: customerId, paymentId, kind });
   }
 
   private paymentDetailInclude(): Prisma.PaymentInclude {

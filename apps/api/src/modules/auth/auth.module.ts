@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { NotificationModule } from '../../common/adapters/notification/notification.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { AuditModule } from '../audit/audit.module';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AuditModule } from '../audit/audit.module';
     RbacModule,
     AuditModule,
     NotificationModule,
+    LoyaltyModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_ACCESS_SECRET ?? 'change_me_access',

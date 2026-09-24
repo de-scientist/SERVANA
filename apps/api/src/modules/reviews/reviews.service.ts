@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AppLoggerService } from '../../common/logging/logger.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import {
   CreateReviewInput,
   RespondReviewInput,
@@ -32,6 +33,7 @@ export class ReviewsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly logger: AppLoggerService,
+    private readonly loyalty: LoyaltyService,
   ) {}
 
   /**
@@ -129,6 +131,19 @@ export class ReviewsService {
     });
 
     this.logger.log(`Review created for booking ${input.bookingId}`);
+
+    // Retention: rule-based points for verified reviews (idempotent per review).
+    try {
+      await this.loyalty.earn(this.prisma, {
+        userId: customerId,
+        event: 'REVIEW',
+        refType: 'REVIEW',
+        refId: created.id,
+      });
+    } catch (err) {
+      this.logger.warn(`Review loyalty earn failed for ${created.id}: ${(err as Error).message}`);
+    }
+
     return created;
   }
 

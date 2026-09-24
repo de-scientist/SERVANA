@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { PaymentService } from '../payments/payment.service';
 import { ProductService } from './product.service';
+import { PromotionService } from '../loyalty/promotion.service';
 import { findInventoryRow } from '../../common/inventory/inventory';
 import {
   CheckoutInput,
@@ -57,6 +58,7 @@ export class OrderService {
     private readonly audit: AuditService,
     private readonly payments: PaymentService,
     private readonly products: ProductService,
+    private readonly promotions: PromotionService,
   ) {}
 
   // --- checkout ---------------------------------------------------------------
@@ -78,7 +80,7 @@ export class OrderService {
       throw new BadRequestException('Cart is empty');
     }
 
-    const order = await this.prisma.$transaction(
+    const { order, free } = await this.prisma.$transaction(
       async (tx) => {
         const lines: Array<{
           productId: string;
@@ -86,6 +88,8 @@ export class OrderService {
           qty: number;
           unitCents: bigint;
           currency: string;
+          categoryId: string | null;
+          providerId: string | null;
         }> = [];
         let subtotal = 0n;
         let currency = 'KES';
@@ -117,13 +121,79 @@ export class OrderService {
               `Only ${row.quantity - row.reserved} unit(s) of "${p.name}" left in stock`,
             );
           }
-          await tx.inventory.update({
-            where: { id: row.id },
-            data: { reserved: { increment: item.qty } },
-          });
 
-          lines.push({ productId: p.id, variantId: item.variantId ?? null, qty: item.qty, unitCents: unit, currency: p.currency });
+          lines.push({
+            productId: p.id, variantId: item.variantId ?? null, qty: item.qty,
+            unitCents: unit, currency: p.currency,
+            categoryId: (p as any).categoryId ?? null, providerId: (p as any).providerId ?? null,
+          });
           subtotal += unit * BigInt(item.qty);
+        }
+
+        // Promotion (optional): validated against the draft, recorded below.
+        let discount = 0n;
+        let promoId: string | null = null;
+        if (input.promoCode) {
+          const checked = await this.promotions.validateForOrder(input.promoCode, {
+            customerId: actor.sub,
+            subtotalCents: subtotal,
+            lines: lines.map((l) => ({ productId: l.productId, categoryId: l.categoryId, providerId: l.providerId })),
+          });
+          discount = checked.discountCents;
+          promoId = (checked.promotion as any).id;
+        }
+        const total = subtotal - discount;
+
+        if (total === 0n) {
+          // Fully covered by promotion: no money moves, so no payment row.
+          // Stock finalizes inline (quantity leaves the shelf immediately).
+          const created = await tx.order.create({
+            data: {
+              customerId: actor.sub,
+              status: 'PAID',
+              subtotalCents: subtotal,
+              discountCents: discount,
+              totalCents: total,
+              currency,
+              items: {
+                create: lines.map((l) => ({
+                  productId: l.productId,
+                  variantId: l.variantId,
+                  qty: l.qty,
+                  unitCents: l.unitCents,
+                })),
+              },
+            },
+            include: { items: true },
+          });
+          for (const l of lines) {
+            const row = await findInventoryRow(tx, l.productId, l.variantId);
+            if (row) {
+              await tx.inventory.update({
+                where: { id: row.id },
+                data: { quantity: row.quantity - l.qty },
+              });
+            }
+          }
+          await tx.orderStatusHistory.create({ data: { orderId: created.id, from: null, to: 'PENDING' } });
+          await tx.orderStatusHistory.create({ data: { orderId: created.id, from: 'PENDING', to: 'PAID' } });
+          if (promoId) {
+            await this.promotions.recordRedemption(tx, {
+              promoId, orderId: created.id, usedBy: actor.sub, discountCents: discount,
+            });
+          }
+          await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+          return { order: created, free: true };
+        }
+
+        for (const l of lines) {
+          const row = await findInventoryRow(tx, l.productId, l.variantId);
+          if (row) {
+            await tx.inventory.update({
+              where: { id: row.id },
+              data: { reserved: { increment: l.qty } },
+            });
+          }
         }
 
         const created = await tx.order.create({
@@ -131,8 +201,8 @@ export class OrderService {
             customerId: actor.sub,
             status: 'PENDING',
             subtotalCents: subtotal,
-            discountCents: 0n,
-            totalCents: subtotal,
+            discountCents: discount,
+            totalCents: total,
             currency,
             items: {
               create: lines.map((l) => ({
@@ -148,8 +218,13 @@ export class OrderService {
         await tx.orderStatusHistory.create({
           data: { orderId: created.id, from: null, to: 'PENDING', },
         });
+        if (promoId) {
+          await this.promotions.recordRedemption(tx, {
+            promoId, orderId: created.id, usedBy: actor.sub, discountCents: discount,
+          });
+        }
         await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-        return created;
+        return { order: created, free: false };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
@@ -161,6 +236,19 @@ export class OrderService {
       entityId: order.id,
       after: { totalCents: order.totalCents.toString(), items: order.items.length },
     });
+
+    if (free) {
+      return {
+        order: this.mapOrder({
+          ...order,
+          history: [
+            { from: null, to: 'PENDING' },
+            { from: 'PENDING', to: 'PAID' },
+          ],
+        }),
+        payment: null,
+      };
+    }
 
     // Initiate payment (PENDING). The order becomes PAID only when the
     // provider webhook confirms the money — never before.
@@ -174,6 +262,48 @@ export class OrderService {
   }
 
   // --- reads --------------------------------------------------------------------
+
+  /** Preview a promo against the current cart (no state changes). */
+  async previewPromo(actor: OrderActor, code: string) {
+    const cart = await this.prisma.cart.findUnique({
+      where: { customerId: actor.sub },
+      include: {
+        items: {
+          include: { product: { include: { variants: true } } },
+          orderBy: { id: 'asc' },
+        },
+      },
+    });
+    if (!cart || cart.items.length === 0) throw new BadRequestException('Cart is empty');
+    let subtotal = 0n;
+    const lines = cart.items.map((item) => {
+      const p = item.product;
+      const delta = item.variantId
+        ? (p.variants.find((v) => v.id === item.variantId)?.priceDeltaCents ?? 0n)
+        : 0n;
+      const unit = this.products.effectiveUnitCents(
+        { priceCents: p.priceCents, saleCents: p.saleCents },
+        delta,
+      );
+      subtotal += unit * BigInt(item.qty);
+      return {
+        productId: p.id,
+        categoryId: (p as any).categoryId ?? null,
+        providerId: (p as any).providerId ?? null,
+      };
+    });
+    const { discountCents } = await this.promotions.validateForOrder(code, {
+      customerId: actor.sub,
+      subtotalCents: subtotal,
+      lines,
+    });
+    return {
+      code: code.trim().toUpperCase(),
+      subtotalCents: subtotal.toString(),
+      discountCents: discountCents.toString(),
+      totalCents: (subtotal - discountCents).toString(),
+    };
+  }
 
   /** Retry payment for a still-PENDING order (fresh provider reference). */
   async pay(actor: OrderActor, id: string, method?: 'MPESA' | 'CARD' | 'BANK' | 'OTHER') {

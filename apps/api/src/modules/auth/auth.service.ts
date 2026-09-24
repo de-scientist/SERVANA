@@ -7,6 +7,7 @@ import { UsersService } from '../users/users.service';
 import { RbacService } from '../rbac/rbac.service';
 import { AuditService } from '../audit/audit.service';
 import { NOTIFICATION_PROVIDER, NotificationProvider } from '../../common/adapters/notification/notification.provider';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import {
   generateToken,
   hashToken,
@@ -41,6 +42,8 @@ export class AuthService {
     private readonly rbac: RbacService,
     private readonly audit: AuditService,
     @Inject(NOTIFICATION_PROVIDER) private readonly notifications: NotificationProvider,
+    // Optional for backwards compatibility (unit specs construct manually).
+    private readonly loyalty?: LoyaltyService,
   ) {}
 
   private get accessSecret(): string {
@@ -80,6 +83,13 @@ export class AuthService {
       userId: created.id,
     });
     await this.audit.record({ actorId: created.id, action: 'user.register', entity: 'user', entityId: created.id, ip });
+
+    // Retention: welcome bonus (rule-based, idempotent). Never blocks signup.
+    try {
+      await this.loyalty?.awardSignup(created.id);
+    } catch {
+      // ignore — earn path is best-effort at registration
+    }
 
     const tokens = await this.issueTokens(created.id, dto.email, roles);
     return { user: created, tokens };

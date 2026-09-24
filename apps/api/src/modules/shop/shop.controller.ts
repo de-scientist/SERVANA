@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { ProductService } from './product.service';
@@ -76,6 +76,13 @@ export class ShopController {
   @Delete('cart/items/:id')
   async removeItem(@CurrentUser() user: Actor, @Param('id') id: string) {
     return { data: await this.cart.removeItem({ sub: user.sub, role: user.role }, id) };
+  }
+
+  @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  @Post('cart/promotions/validate')
+  async validatePromo(@CurrentUser() user: Actor, @Body() body: { code: string }) {
+    if (!body?.code) throw new BadRequestException('code is required');
+    return { data: await this.orders.previewPromo({ sub: user.sub, role: user.role }, body.code) };
   }
 
   // --- orders (customer) ----------------------------------------------------------

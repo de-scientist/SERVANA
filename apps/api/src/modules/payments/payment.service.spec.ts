@@ -111,8 +111,19 @@ function makeCommission() {
   } as any;
 }
 
-function service(prisma?: any, gateway?: any, commission?: any) {
-  return new PaymentService(prisma ?? makePrisma(), gateway ?? makeGateway(), commission ?? makeCommission());
+function makeLoyalty() {
+  return {
+    earnFromPayment: jest.fn().mockResolvedValue({ transaction: { id: 'lt1' } }),
+  } as any;
+}
+
+function service(prisma?: any, gateway?: any, commission?: any, loyalty?: any) {
+  return new PaymentService(
+    prisma ?? makePrisma(),
+    gateway ?? makeGateway(),
+    commission ?? makeCommission(),
+    loyalty ?? makeLoyalty(),
+  );
 }
 
 describe('PaymentService', () => {
@@ -483,11 +494,12 @@ describe('PaymentService', () => {
       );
     });
 
-    it('awards loyalty points on success', async () => {
+    it('awards booking loyalty via the loyalty engine on success', async () => {
       const prisma = makePrisma();
       const commission = makeCommission();
       const gateway = makeGateway();
-      const svc = service(prisma, gateway, commission);
+      const loyalty = makeLoyalty();
+      const svc = service(prisma, gateway, commission, loyalty);
 
       let capturedTx: any;
       prisma.$transaction.mockImplementation(async (fn: any) => {
@@ -497,6 +509,7 @@ describe('PaymentService', () => {
               id: 'pay1', bookingId: 'b1', status: 'PENDING', grossCents: 200000n,
               currency: 'KES', expiresAt: new Date(Date.now() + 60000),
             }),
+            findUnique: jest.fn().mockResolvedValue({ id: 'pay1', bookingId: 'b1', orderId: null }),
             update: jest.fn(),
           },
           booking: {
@@ -524,53 +537,66 @@ describe('PaymentService', () => {
         providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: '200000', currency: 'KES',
       });
 
-      expect(capturedTx.loyaltyTransaction.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ type: 'EARN_BOOKING' }) }),
+      // Delegated to the rule-based engine (idempotency enforced there).
+      expect(loyalty.earnFromPayment).toHaveBeenCalledWith(
+        capturedTx,
+        expect.objectContaining({ paymentId: 'pay1', kind: 'BOOKING' }),
       );
     });
 
-    it('does not award loyalty twice (idempotent)', async () => {
+    it('delegates order loyalty as PURCHASE events', async () => {
       const prisma = makePrisma();
       const commission = makeCommission();
       const gateway = makeGateway();
-      const svc = service(prisma, gateway, commission);
+      const loyalty = makeLoyalty();
+      const svc = service(prisma, gateway, commission, loyalty);
 
-      let capturedTx: any;
       prisma.$transaction.mockImplementation(async (fn: any) => {
-        capturedTx = {
+        const tx = {
           payment: {
             findFirst: jest.fn().mockResolvedValue({
-              id: 'pay1', bookingId: 'b1', status: 'PENDING', grossCents: 200000n,
+              id: 'pay1', bookingId: null, orderId: 'ord1', status: 'PENDING', grossCents: 300000n,
               currency: 'KES', expiresAt: new Date(Date.now() + 60000),
             }),
+            findUnique: jest.fn().mockResolvedValue({ id: 'pay1', bookingId: null, orderId: 'ord1' }),
             update: jest.fn(),
           },
-          booking: {
+          order: {
             findUnique: jest.fn().mockResolvedValue({
-              id: 'b1', status: 'AWAITING_PAYMENT', providerId: 'prov1',
-              providerService: { categoryId: 'cat1' },
+              id: 'ord1', customerId: 'cust1', status: 'PENDING',
+              items: [{ productId: 'prod1', variantId: null, qty: 1, product: { providerId: 'prov1' } }],
             }),
             update: jest.fn(),
           },
+          orderStatusHistory: { create: jest.fn() },
           paymentTransaction: { create: jest.fn() },
           commission: { upsert: jest.fn() },
           providerEarning: { upsert: jest.fn().mockResolvedValue({ id: 'e1' }) },
-          payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm_default', type: 'MPESA', isDefault: true }), create: jest.fn() },
+          payoutMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'pm1' }), create: jest.fn() },
           payout: { upsert: jest.fn().mockResolvedValue({ id: 'po1' }) },
           payoutItem: { upsert: jest.fn() },
+          inventory: {
+            findFirst: jest.fn().mockResolvedValue({ id: 'inv1', quantity: 5, reserved: 1 }),
+            update: jest.fn(),
+          },
           loyaltyTier: { upsert: jest.fn() },
-          loyaltyAccount: { upsert: jest.fn().mockResolvedValue({ id: 'la1', customerId: 'cust1', balanceCents: 0n }), update: jest.fn() },
-          loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue({ id: 'lt1' }), create: jest.fn() },
+          loyaltyAccount: { upsert: jest.fn(), update: jest.fn() },
+          loyaltyTransaction: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() },
+          booking: { update: jest.fn(), findUnique: jest.fn() },
           bookingStatusHistory: { create: jest.fn() },
         };
-        return fn(capturedTx);
+        return fn(tx);
       });
 
-      await svc.handleProviderEvent('mpesa', {
-        providerRef: 'mpesa_ref_123', status: 'SUCCESSFUL', amount: '200000', currency: 'KES',
+      const result: any = await svc.handleProviderEvent('mpesa', {
+        providerRef: 'mpesa_ref_1', status: 'SUCCESSFUL', amount: '300000', currency: 'KES',
       });
 
-      expect(capturedTx.loyaltyTransaction.create).not.toHaveBeenCalled();
+      expect(result.captured).toBe(true);
+      expect(loyalty.earnFromPayment).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ paymentId: 'pay1', kind: 'PURCHASE' }),
+      );
     });
   });
 

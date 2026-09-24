@@ -105,6 +105,7 @@ export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
 export const checkoutSchema = z.object({
   address: z.record(z.string(), z.unknown()).optional(),
   method: z.enum(['MPESA', 'CARD', 'BANK', 'OTHER']).default('OTHER'),
+  promoCode: z.string().min(3).max(32).optional(),
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 

@@ -44,8 +44,15 @@ function makeProducts() {
   } as any;
 }
 
+function makePromotions() {
+  return {
+    validateForOrder: jest.fn(),
+    recordRedemption: jest.fn().mockResolvedValue(undefined),
+  } as any;
+}
+
 function service(prisma?: any, payments?: any) {
-  return new OrderService(prisma ?? makePrisma(), makeAudit(), payments ?? makePayments(), makeProducts());
+  return new OrderService(prisma ?? makePrisma(), makeAudit(), payments ?? makePayments(), makeProducts(), makePromotions());
 }
 
 function cartWith(itemOverrides: Record<string, any> = {}) {

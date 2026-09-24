@@ -845,13 +845,23 @@ enum LoyaltyTxnType {
 model Reward {
   id        String @id @default(uuid())
   name      String
-  costCents BigInt
+  costCents BigInt // cost in loyalty points
+  active    Boolean @default(true)
 }
 
 model LoyaltyTier {
   id            String @id @default(uuid())
   name          String
   thresholdCents BigInt
+}
+
+// Admin-configurable points rules: one row per earn event. Points are plain
+// integers (not cents). Inactive or missing rules award nothing.
+model LoyaltyRule {
+  id     String  @id @default(uuid())
+  event  String  @unique // BOOKING | REVIEW | REFERRAL | PURCHASE | SIGNUP
+  points Int
+  active Boolean @default(true)
 }
 
 model ReferralCode {
@@ -878,10 +888,21 @@ enum RewardStatus {
 model Promotion {
   id        String        @id @default(uuid())
   code      String        @unique
+  name      String
+  description String?
   kind      PromotionKind
-  value     BigInt
+  value     BigInt // PERCENTAGE: basis points (1000 = 10%); FIXED: minor units
   validFrom DateTime
   validTo   DateTime?
+  // Targeting: GLOBAL applies to any order; others require every line to match.
+  scope     String        @default("GLOBAL") // GLOBAL | PRODUCT | CATEGORY | PROVIDER | SERVICE
+  scopeId   String?
+  minOrderCents BigInt    @default(0)
+  maxDiscountCents BigInt?
+  usageLimit Int?
+  usedCount  Int          @default(0)
+  perCustomerLimit Int    @default(1)
+  active    Boolean       @default(true)
 }
 
 enum PromotionKind {
@@ -895,6 +916,9 @@ model PromotionRedemption {
   promoId  String
   bookingId String?
   orderId   String?
+  usedBy    String?
+  discountCents BigInt @default(0)
+  createdAt DateTime @default(now())
 }
 
 // ---------------------------------------------------------------------------
