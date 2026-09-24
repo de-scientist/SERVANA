@@ -60,6 +60,8 @@ describe('Phase 9 · shop (integration)', () => {
     await prisma.productVariant.deleteMany({});
     await prisma.serviceProductLink.deleteMany({});
     await prisma.product.deleteMany({});
+    await prisma.service.deleteMany({});
+    await prisma.category.deleteMany({});
     await prisma.auditLog.deleteMany({});
   }
 
@@ -101,13 +103,14 @@ describe('Phase 9 · shop (integration)', () => {
   }
 
   /** Admin creates a stocked product; returns { product, variantId? }. */
-  async function createProduct(adminToken: string, suffix: string, opts: { qty?: number; price?: number; salePrice?: number } = {}) {
+  async function createProduct(adminToken: string, suffix: string, opts: { qty?: number; price?: number; salePrice?: number; providerId?: string } = {}) {
     const res = await call('POST', '/admin/products', adminToken, {
       name: `Shea Hair Oil ${suffix}`,
       brand: 'Servana Naturals',
       sku: `OIL-${suffix}-${Date.now()}`,
       price: opts.price ?? 1500,
       ...(opts.salePrice ? { salePrice: opts.salePrice } : {}),
+      ...(opts.providerId ? { providerId: opts.providerId } : {}),
       currency: 'KES',
       images: [{ key: 'oil.jpg', url: 'https://example.com/oil.jpg' }],
       variants: [{ attrs: { size: '250ml' }, priceDelta: 0 }],
@@ -208,7 +211,13 @@ describe('Phase 9 · shop (integration)', () => {
     it('reserves on checkout and finalizes on capture (no oversell)', async () => {
       const admin = await superAdmin();
       const cust = await register('CUSTOMER', `p9buy_${Date.now()}@example.com`);
-      const { product } = await createProduct(admin.accessToken, 'buy', { qty: 10 });
+      // Seller-owned product exercises the full money trail (earning + payout).
+      const sellerEmail = `p9seller_${Date.now()}@example.com`;
+      const prov = await register('PROVIDER', sellerEmail);
+      await call('POST', '/providers/me', prov.accessToken, { businessName: 'Seller Studio', city: 'Nairobi' });
+      const sellerUser = await prisma.user.findUnique({ where: { email: sellerEmail } });
+      const seller = await prisma.providerProfile.findFirst({ where: { userId: sellerUser!.id } });
+      const { product } = await createProduct(admin.accessToken, 'buy', { qty: 10, providerId: seller!.id });
 
       await call('POST', '/cart/items', cust.accessToken, { productId: product.id, qty: 2 });
       const checkout = await call('POST', '/orders/checkout', cust.accessToken, { method: 'MPESA' });
@@ -236,22 +245,21 @@ describe('Phase 9 · shop (integration)', () => {
 
       // Money trail: commission + seller earning + linked payout.
       const earning = await prisma.providerEarning.findFirst({ where: { orderId: order.id } });
-      // Platform product (no seller) keeps full margin as commission instead.
+      expect(earning).toBeDefined();
+      expect(earning!.providerId).toBe(seller!.id);
+      expect(earning!.grossCents.toString()).toBe('300000');
+      expect((earning!.grossCents - earning!.commissionCents).toString()).toBe(earning!.netCents.toString());
       const commission = await prisma.commission.findFirst({ where: { paymentId: payment.id } });
       expect(commission).toBeDefined();
-      if (earning) {
-        expect(earning.netCents.toString()).toBe(
-          (BigInt(payment.grossCents ?? '300000') - earning.commissionCents).toString(),
-        );
-        const payout = await prisma.payout.findFirst({
-          where: { reference: `PO_${payment.id}` },
-          include: { items: true },
-        });
-        expect(payout).toBeDefined();
-        expect(payout!.items).toHaveLength(1);
-      } else {
-        expect(commission!.rateBasisPoints).toBe(10000);
-      }
+      expect(commission!.commissionCents.toString()).toBe(earning!.commissionCents.toString());
+      const payout = await prisma.payout.findFirst({
+        where: { reference: `PO_${payment.id}` },
+        include: { items: true },
+      });
+      expect(payout).toBeDefined();
+      expect(payout!.items).toHaveLength(1);
+      expect(payout!.items[0].earningId).toBe(earning!.id);
+      expect(payout!.totalCents.toString()).toBe(earning!.netCents.toString());
     });
 
     it('blocks overselling across concurrent checkouts', async () => {
