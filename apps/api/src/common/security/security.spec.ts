@@ -392,6 +392,40 @@ describe('security negatives (Phase 17)', () => {
     });
   });
 
+  // --- GUARANTEE 7a: no privilege escalation at registration -------------------------------
+
+  describe('registration roles', () => {
+    it('rejects SUPER_ADMIN self-registration at the schema boundary', async () => {
+      const { registerSchema } = await import('../../modules/auth/dto/auth.schema');
+      expect(() => registerSchema.parse({ name: 'Attacker', email: 'a@b.com', password: 'Password1', role: 'SUPER_ADMIN' })).toThrow();
+      expect(() => registerSchema.parse({ name: 'Attacker', email: 'a@b.com', password: 'Password1', role: 'ADMIN' })).toThrow();
+      expect(registerSchema.parse({ name: 'Pro', email: 'p@b.com', password: 'Password1', role: 'PROVIDER' }).role).toBe('PROVIDER');
+    });
+  });
+
+  // --- GUARANTEE 7b: no customer self-refund ------------------------------------------------
+
+  describe('refund authorization', () => {
+    it('rejects customer self-refund (admin-only money move)', async () => {
+      const prisma: any = { payment: { findUnique: jest.fn() } };
+      const svc = new PaymentService(prisma, {} as any, {} as any, {} as any, {} as any);
+      await expect(svc.refund({ sub: 'cust1', role: 'CUSTOMER' }, 'pay1')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(prisma.payment.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects provider self-processing of payouts (no self-settlement)', async () => {
+      const { PayoutService } = await import('../../modules/payments/payout.service');
+      const prisma: any = { payout: { findUnique: jest.fn() } };
+      const svc = new PayoutService(prisma, { record: jest.fn() } as any, { notify: jest.fn() } as any);
+      await expect(svc.processPayout({ sub: 'prov1', role: 'PROVIDER' }, 'p1')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(prisma.payout.findUnique).not.toHaveBeenCalled();
+    });
+  });
+
   // --- GUARANTEE 7+8: reviews + verification documents ------------------------------------------------------------------
 
   describe('public profile exposure', () => {
