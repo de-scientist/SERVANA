@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { PrismaModule } from '../src/modules/prisma/prisma.module';
+import { QueueModule } from '../src/modules/queue/queue.module';
 import { RbacModule } from '../src/modules/rbac/rbac.module';
 import { AuditModule } from '../src/modules/audit/audit.module';
 import { StorageModule } from '../src/common/adapters/storage/storage.module';
@@ -134,6 +135,8 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         PrismaModule,
+
+        QueueModule,
         RbacModule,
         AuditModule,
         StorageModule,
@@ -579,7 +582,11 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
   describe('commission rule management', () => {
     it('super admin can create and manage commission rules', async () => {
       const superAdminEmail = `superadmin_${Date.now()}@example.com`;
-      const reg = await auth.register({ email: superAdminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+      // SECURITY (Phase 17): privileged roles are granted out-of-band, never self-registered.
+      await auth.register({ email: superAdminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'CUSTOMER' });
+      const superAdminUser = await prisma.user.findUnique({ where: { email: superAdminEmail } });
+      await rbac.assignRole(superAdminUser!.id, 'SUPER_ADMIN');
+      const reg = { tokens: await auth.login({ email: superAdminEmail, password: 'Passw0rd!23' }) };
 
       const list = await call('GET', '/admin/commission-rules', reg.tokens.accessToken);
       expect(list.status).toBe(200);
@@ -658,7 +665,11 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
 
     it('admin can create a manual payout backed by AVAILABLE earnings', async () => {
       const superAdminEmail = `payoutadmin_${Date.now()}@example.com`;
-      const reg = await auth.register({ email: superAdminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+      // SECURITY (Phase 17): privileged roles are granted out-of-band, never self-registered.
+      await auth.register({ email: superAdminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'CUSTOMER' });
+      const payoutAdminUser = await prisma.user.findUnique({ where: { email: superAdminEmail } });
+      await rbac.assignRole(payoutAdminUser!.id, 'SUPER_ADMIN');
+      const reg = { tokens: await auth.login({ email: superAdminEmail, password: 'Passw0rd!23' }) };
       const cust = await register('CUSTOMER', `pcustm_${Date.now()}@example.com`);
       const { prov, serviceId } = await setupVerifiedProvider(`pprovm_${Date.now()}@example.com`);
 
@@ -695,7 +706,11 @@ describe('Phase 6 · payment & commission engine (integration)', () => {
 
     it('admin can view payout dashboard and reconciliation', async () => {
       const superAdminEmail = `recon_${Date.now()}@example.com`;
-      const reg = await auth.register({ email: superAdminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+      // SECURITY (Phase 17): privileged roles are granted out-of-band, never self-registered.
+      await auth.register({ email: superAdminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'CUSTOMER' });
+      const reconAdminUser = await prisma.user.findUnique({ where: { email: superAdminEmail } });
+      await rbac.assignRole(reconAdminUser!.id, 'SUPER_ADMIN');
+      const reg = { tokens: await auth.login({ email: superAdminEmail, password: 'Passw0rd!23' }) };
 
       const dashboard = await call('GET', '/payments/payouts/dashboard', reg.tokens.accessToken);
       expect(dashboard.status).toBe(200);

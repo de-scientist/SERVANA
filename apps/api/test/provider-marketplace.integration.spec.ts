@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { PrismaModule } from '../src/modules/prisma/prisma.module';
+import { QueueModule } from '../src/modules/queue/queue.module';
 import { RbacModule } from '../src/modules/rbac/rbac.module';
 import { AuditModule } from '../src/modules/audit/audit.module';
 import { StorageModule } from '../src/common/adapters/storage/storage.module';
@@ -77,6 +78,8 @@ describe('Provider marketplace (integration)', () => {
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         PrismaModule,
+
+        QueueModule,
         RbacModule,
         AuditModule,
         StorageModule,

@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { PrismaModule } from '../src/modules/prisma/prisma.module';
+import { QueueModule } from '../src/modules/queue/queue.module';
 import { RbacModule } from '../src/modules/rbac/rbac.module';
 import { AuditModule } from '../src/modules/audit/audit.module';
 import { StorageModule } from '../src/common/adapters/storage/storage.module';
@@ -74,14 +75,14 @@ describe('Phase 11 · communication (integration)', () => {
     return reg.tokens;
   }
 
+  // SECURITY (Phase 17): privileged roles are never self-registered — grant
+  // out-of-band via RBAC, then re-login so the JWT carries fresh claims.
   async function superAdmin() {
-    const reg = await auth.register({
-      email: `p11admin_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`,
-      password: 'Passw0rd!23',
-      name: 'Super Admin',
-      role: 'SUPER_ADMIN',
-    });
-    return reg.tokens;
+    const email = `p11admin_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+    await auth.register({ email, password: 'Passw0rd!23', name: 'Super Admin', role: 'CUSTOMER' });
+    const created = await prisma.user.findUnique({ where: { email } });
+    await rbac.assignRole(created!.id, 'SUPER_ADMIN');
+    return auth.login({ email, password: 'Passw0rd!23' });
   }
 
   async function call(method: string, path: string, token?: string, body?: unknown) {
@@ -133,7 +134,7 @@ describe('Phase 11 · communication (integration)', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
-        PrismaModule, RbacModule, AuditModule, StorageModule, LoggingModule, NotificationModule,
+        PrismaModule, QueueModule, RbacModule, AuditModule, StorageModule, LoggingModule, NotificationModule,
         UsersModule, AuthModule, ProvidersModule, VerificationModule, AdminModule,
         AvailabilityModule, BookingsModule, PaymentsModule, NotificationsModule, MessagingModule,
       ],

@@ -5,6 +5,7 @@ import { RbacModule } from '../src/modules/rbac/rbac.module';
 import { AuditModule } from '../src/modules/audit/audit.module';
 import { NotificationModule } from '../src/common/adapters/notification/notification.module';
 import { PrismaModule } from '../src/modules/prisma/prisma.module';
+import { QueueModule } from '../src/modules/queue/queue.module';
 import { ConfigModule } from '@nestjs/config';
 import { LoggingModule } from '../src/common/logging/logging.module';
 import { NOTIFICATION_PROVIDER } from '../src/common/adapters/notification/notification.provider';
@@ -46,6 +47,8 @@ describe('Auth flow (integration, real Postgres)', () => {
         AuditModule,
         NotificationModule,
         PrismaModule,
+
+        QueueModule,
       ],
     })
       .overrideProvider(NOTIFICATION_PROVIDER)

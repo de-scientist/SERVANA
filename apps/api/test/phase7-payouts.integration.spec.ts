@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { PrismaModule } from '../src/modules/prisma/prisma.module';
+import { QueueModule } from '../src/modules/queue/queue.module';
 import { RbacModule } from '../src/modules/rbac/rbac.module';
 import { AuditModule } from '../src/modules/audit/audit.module';
 import { StorageModule } from '../src/common/adapters/storage/storage.module';
@@ -169,6 +170,7 @@ describe('Phase 7 · provider earnings & payouts (integration)', () => {
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         PrismaModule,
+        QueueModule,
         RbacModule,
         AuditModule,
         StorageModule,
@@ -229,7 +231,11 @@ describe('Phase 7 · provider earnings & payouts (integration)', () => {
 
     it('reconciliation proves the ledger is intact (discrepancy 0, no orphans)', async () => {
       const adminEmail = `p7recon_${Date.now()}@example.com`;
-      const reg = await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+      // SECURITY (Phase 17): privileged roles are granted out-of-band, never self-registered.
+      await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'CUSTOMER' });
+      const p7reconUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+      await rbac.assignRole(p7reconUser!.id, 'SUPER_ADMIN');
+      const reg = { tokens: await auth.login({ email: adminEmail, password: 'Passw0rd!23' }) };
 
       const result = await call('GET', '/payments/payouts/reconciliation', reg.tokens.accessToken);
       expect(result.status).toBe(200);
@@ -270,7 +276,11 @@ describe('Phase 7 · provider earnings & payouts (integration)', () => {
   describe('payout failure and retry', () => {
     it('FAILED → PENDING → SUCCESSFUL with earning PAID, all audited', async () => {
       const adminEmail = `p7fail_${Date.now()}@example.com`;
-      const reg = await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+      // SECURITY (Phase 17): privileged roles are granted out-of-band, never self-registered.
+      await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'CUSTOMER' });
+      const p7failUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+      await rbac.assignRole(p7failUser!.id, 'SUPER_ADMIN');
+      const reg = { tokens: await auth.login({ email: adminEmail, password: 'Passw0rd!23' }) };
       const { bookingId, paymentId } = await paidBooking('fail', 2);
 
       const payout = await prisma.payout.findFirst({ where: { reference: `PO_${paymentId}` } });
@@ -321,7 +331,11 @@ describe('Phase 7 · provider earnings & payouts (integration)', () => {
 
     it('retry is rejected after max retries', async () => {
       const adminEmail = `p7maxretry_${Date.now()}@example.com`;
-      const reg = await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+      // SECURITY (Phase 17): privileged roles are granted out-of-band, never self-registered.
+      await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'CUSTOMER' });
+      const p7maxretryUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+      await rbac.assignRole(p7maxretryUser!.id, 'SUPER_ADMIN');
+      const reg = { tokens: await auth.login({ email: adminEmail, password: 'Passw0rd!23' }) };
       const { paymentId } = await paidBooking('maxretry', 3);
       const payout = await prisma.payout.findFirst({ where: { reference: `PO_${paymentId}` } });
       const payoutId = payout!.id;
@@ -340,7 +354,11 @@ describe('Phase 7 · provider earnings & payouts (integration)', () => {
   describe('reversal and manual adjustments', () => {
     it('SUCCESSFUL → REVERSED restores the earning to AVAILABLE', async () => {
       const adminEmail = `p7rev_${Date.now()}@example.com`;
-      const reg = await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+      // SECURITY (Phase 17): privileged roles are granted out-of-band, never self-registered.
+      await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'CUSTOMER' });
+      const p7revUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+      await rbac.assignRole(p7revUser!.id, 'SUPER_ADMIN');
+      const reg = { tokens: await auth.login({ email: adminEmail, password: 'Passw0rd!23' }) };
       const { bookingId, paymentId } = await paidBooking('rev', 4);
       const payout = await prisma.payout.findFirst({ where: { reference: `PO_${paymentId}` } });
       const payoutId = payout!.id;
@@ -356,7 +374,11 @@ describe('Phase 7 · provider earnings & payouts (integration)', () => {
 
     it('manual adjustment requires a reason, updates the total, and is audited', async () => {
       const adminEmail = `p7adj_${Date.now()}@example.com`;
-      const reg = await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'SUPER_ADMIN' });
+      // SECURITY (Phase 17): privileged roles are granted out-of-band, never self-registered.
+      await auth.register({ email: adminEmail, password: 'Passw0rd!23', name: 'Super Admin', role: 'CUSTOMER' });
+      const p7adjUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+      await rbac.assignRole(p7adjUser!.id, 'SUPER_ADMIN');
+      const reg = { tokens: await auth.login({ email: adminEmail, password: 'Passw0rd!23' }) };
       const { paymentId } = await paidBooking('adj', 5);
       const payout = await prisma.payout.findFirst({ where: { reference: `PO_${paymentId}` } });
       const payoutId = payout!.id;
