@@ -91,6 +91,29 @@ export default async function ProviderPage({ params }: PageProps) {
 
       {p.bio && <p className="mt-6 max-w-3xl leading-relaxed text-foreground/90">{p.bio}</p>}
 
+      <section aria-label="Trust signals" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.reviews.overall > 0 ? `${p.reviews.overall.toFixed(1)} ★` : 'New'}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{p.reviews.total} verified review{p.reviews.total === 1 ? '' : 's'}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.reviews.customersServed.toLocaleString()}</p>
+          <p className="mt-1 text-xs text-muted-foreground">customers served</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.reviews.completionRate}%</p>
+          <p className="mt-1 text-xs text-muted-foreground">completion rate</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.reviews.responseRate}%</p>
+          <p className="mt-1 text-xs text-muted-foreground">response rate</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.verification.verified ? 'Verified' : 'Unverified'}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{p.verification.level?.replace(/_/g, ' ').toLowerCase() ?? 'identity not yet verified'}</p>
+        </div>
+      </section>
+
       <section className="mt-10">
         <h2 className="text-xl font-semibold">Services</h2>
         {p.services.length === 0 ? (
