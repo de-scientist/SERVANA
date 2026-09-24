@@ -48,7 +48,7 @@ function makeDb(opts: {
     loyaltyAccount: {
       findUnique: jest.fn().mockResolvedValue(account),
       create: jest.fn().mockImplementation(async ({ data }: any) => ({ id: 'acc1', ...data })),
-      update: jest.fn().mockImplementation(async ({ data }: any) => ({ ...account, balanceCents: 20n })),
+      update: jest.fn().mockImplementation(async () => ({ ...account, balanceCents: 20n })),
     },
     loyaltyTransaction: {
       findFirst: jest.fn().mockResolvedValue(opts.dupTxn ?? null),
