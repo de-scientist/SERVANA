@@ -79,21 +79,37 @@ export class RankingService {
     private readonly logger: AppLoggerService,
   ) {}
 
-  async calculate(providerId: string): Promise<ProviderRanking> {
-    const profile = await this.prisma.providerProfile.findUnique({
-      where: { userId: providerId },
+  /**
+   * Canonical provider identity is ProviderProfile.id — bookings, reviews,
+   * earnings and verification rows are all keyed by it. Accept a profile id
+   * or (liberally, for older callers) a user id and resolve to the profile.
+   */
+  private async resolveProviderId(providerRef: string) {
+    const profiles: any = (this.prisma as any).providerProfile;
+    const byId = await profiles?.findUnique?.({
+      where: { id: providerRef },
       include: { verification: { select: { level: true, status: true } } },
     });
-    if (!profile) throw new Error('Provider profile not found');
+    if (byId) return byId;
+    const byUser = await profiles?.findUnique?.({
+      where: { userId: providerRef },
+      include: { verification: { select: { level: true, status: true } } },
+    });
+    if (byUser) return byUser;
+    throw new Error('Provider profile not found');
+  }
+
+  async calculate(providerRef: string): Promise<ProviderRanking> {
+    const profile = await this.resolveProviderId(providerRef);
+    const providerId: string = profile.id;
 
     const stats = await this.computeStats(providerId);
     const weights = DEFAULT_WEIGHTS;
     const components = await this.computeComponents(providerId, stats, weights);
 
-    const qualityScore = components.reduce(
-      (sum, c) => sum + c.weightedScore * c.weight,
-      0,
-    );
+    // weightedScore already includes the component weight, so the score is
+    // the plain sum — never re-apply weights here.
+    const qualityScore = components.reduce((sum, c) => sum + c.weightedScore, 0);
 
     const ranking: ProviderRanking = {
       providerId,
@@ -128,8 +144,8 @@ export class RankingService {
     return ranking;
   }
 
-  async getDashboard(providerId: string): Promise<ProviderDashboard> {
-    const ranking = await this.calculate(providerId);
+  async getDashboard(providerRef: string): Promise<ProviderDashboard> {
+    const ranking = await this.calculate(providerRef);
     const signals = ranking.signals;
 
     const trust: TrustSignals = {
@@ -140,7 +156,8 @@ export class RankingService {
       verified: signals.verificationLevel !== null && signals.verificationScore >= 60,
     };
 
-    const insights = this.generateInsights(ranking);
+    const dimensionAverages = await this.computeDimensionAverages(ranking.providerId);
+    const insights = this.generateInsights(ranking, dimensionAverages);
 
     return {
       ranking,
@@ -150,8 +167,8 @@ export class RankingService {
     };
   }
 
-  async getRanking(providerId: string): Promise<ProviderRanking> {
-    return this.calculate(providerId);
+  async getRanking(providerRef: string): Promise<ProviderRanking> {
+    return this.calculate(providerRef);
   }
 
   async computeAllSnapshots(): Promise<number> {
@@ -162,9 +179,9 @@ export class RankingService {
 
     for (const p of providers) {
       try {
-        await this.calculate(p.userId);
+        await this.calculate(p.id);
       } catch (err) {
-        this.logger.warn(`Failed to compute ranking for provider ${p.userId}: ${(err as Error).message}`);
+        this.logger.warn(`Failed to compute ranking for provider ${p.id}: ${(err as Error).message}`);
       }
     }
 
@@ -343,8 +360,10 @@ export class RankingService {
   }
 
   private logNormalize(value: number, max: number): number {
-    if (value === 0) return 0;
-    return (Math.log(1 + value) / Math.log(1 + max)) * 100;
+    if (value <= 0) return 0;
+    // Log compression stops raw volume from dominating; the cap keeps every
+    // component (and therefore the total score) within 0–100.
+    return Math.min(100, (Math.log(1 + value) / Math.log(1 + max)) * 100);
   }
 
   private confidence(sampleSize: number): number {
@@ -366,7 +385,7 @@ export class RankingService {
 
   private async computeProfileCompleteness(providerId: string): Promise<number> {
     const profile = await this.prisma.providerProfile.findUnique({
-      where: { userId: providerId },
+      where: { id: providerId },
     });
     if (!profile) return 0;
 
@@ -389,7 +408,7 @@ export class RankingService {
     return Math.round((filled / fields.length) * 100);
   }
 
-  private generateInsights(ranking: ProviderRanking): PerformanceInsights {
+  private generateInsights(ranking: ProviderRanking, dimensionAverages: Record<string, number> = {}): PerformanceInsights {
     const strengths: string[] = [];
     const improvements: string[] = [];
 
@@ -401,10 +420,40 @@ export class RankingService {
       }
     }
 
+    // Surface the weakest review dimensions as improvement areas so the
+    // provider sees what customers actually flagged. Derived only from
+    // real approved reviews — never fabricated.
+    for (const [name, avg] of Object.entries(dimensionAverages)) {
+      if (avg < 3.5 && !improvements.includes(`Review dimension: ${name}`)) {
+        improvements.push(`Review dimension: ${name}`);
+      }
+    }
+
     return {
       strengths,
       improvements,
-      dimensionAverages: {},
+      dimensionAverages,
     };
+  }
+
+  private async computeDimensionAverages(providerId: string): Promise<Record<string, number>> {
+    const reviews = await this.prisma.review.findMany({
+      where: { providerId, status: 'APPROVED' as any },
+      include: { dimensions: true },
+    });
+    const sums = new Map<string, { total: number; count: number }>();
+    for (const r of reviews) {
+      for (const d of (r as any).dimensions ?? []) {
+        const prev = sums.get(d.name) ?? { total: 0, count: 0 };
+        prev.total += d.score;
+        prev.count += 1;
+        sums.set(d.name, prev);
+      }
+    }
+    const averages: Record<string, number> = {};
+    for (const [name, { total, count }] of sums) {
+      averages[name] = Math.round((total / count) * 10) / 10;
+    }
+    return averages;
   }
 }

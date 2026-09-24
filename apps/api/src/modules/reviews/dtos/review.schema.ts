@@ -40,8 +40,8 @@ export const moderateReviewSchema = z.object({
 export type ModerateReviewInput = z.infer<typeof moderateReviewSchema>;
 
 export const listReviewsSchema = z.object({
-  page: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).max(50).default(20),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(20),
   status: z.enum(['APPROVED', 'PENDING', 'REJECTED', 'REMOVED']).optional(),
 });
 

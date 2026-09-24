@@ -15,6 +15,7 @@ import { VerificationModule } from '../src/modules/verification/verification.mod
 import { AdminModule } from '../src/modules/admin/admin.module';
 import { AvailabilityModule } from '../src/modules/availability/availability.module';
 import { BookingsModule } from '../src/modules/bookings/bookings.module';
+import { PaymentsModule } from '../src/modules/payments/payments.module';
 import { ReviewsModule } from '../src/modules/reviews/reviews.module';
 import { RankingModule } from '../src/modules/ranking/ranking.module';
 import { ZodValidationPipe } from '../src/common/pipes/zod-validation.pipe';
@@ -127,6 +128,30 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
     return { status: res.status, body: json };
   }
 
+  /** Reviews require a valid completed + paid booking: book → pay → capture → confirm → start → complete. */
+  async function payBooking(bookingId: string, custToken: string) {
+    const payRes = await call('POST', '/payments', custToken, { bookingId });
+    expect(payRes.status).toBe(201);
+    const res = await fetch(base + '/api/v1/payments/webhook/mpesa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-pay-signature': 'test-signature' },
+      body: JSON.stringify({
+        providerRef: payRes.body.data.providerRef,
+        status: 'SUCCESSFUL',
+        amount: '200000',
+        currency: 'KES',
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    expect(json.captured).toBe(true);
+  }
+
+  async function completeBooking(bookingId: string, provToken: string) {
+    await call('PATCH', `/bookings/provider/${bookingId}/confirm`, provToken);
+    await call('PATCH', `/bookings/provider/${bookingId}/start`, provToken);
+    await call('PATCH', `/bookings/provider/${bookingId}/complete`, provToken);
+  }
+
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -144,6 +169,7 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
         AdminModule,
         AvailabilityModule,
         BookingsModule,
+        PaymentsModule,
         ReviewsModule,
         RankingModule,
       ],
@@ -175,18 +201,16 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
 
   it('allows review after valid completed booking', async () => {
     const cust = await register('CUSTOMER', `rv_cust_${Date.now()}@example.com`);
-    const provId = `rv_prov_${Date.now()}`;
     const reg = await register('PROVIDER', `rv_prov_${Date.now()}@example.com`);
     const profile = await prisma.providerProfile.findFirst({ where: { userId: reg.user.id } });
     if (!profile) throw new Error('No profile');
     await verifyProvider(profile.id);
     await setupVerifiedProvider(profile.id);
 
-    const cat = await prisma.category.findFirst();
     const startsAt = futureIso(0);
 
     const booking = await call('POST', '/bookings', cust.accessToken, {
-      providerServiceId: profile.services[0]?.id ?? (await prisma.providerService.findFirst({ where: { providerId: profile.id } })).id,
+      providerServiceId: (await prisma.providerService.findFirst({ where: { providerId: profile.id } })).id,
       startsAt,
       deliveryType: 'AT_PROVIDER_LOCATION',
     });
@@ -194,9 +218,8 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
     const bookingId = booking.body.data.id;
 
     // Complete the booking
-    await call('PATCH', `/bookings/provider/${bookingId}/confirm`, reg.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/start`, reg.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/complete`, reg.accessToken);
+    await payBooking(bookingId, cust.accessToken);
+    await completeBooking(bookingId, reg.accessToken);
 
     const review = await call('POST', '/reviews', cust.accessToken, {
       bookingId,
@@ -234,9 +257,8 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
     });
     const bookingId = booking.body.data.id;
 
-    await call('PATCH', `/bookings/provider/${bookingId}/confirm`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/start`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/complete`, prov.accessToken);
+    await payBooking(bookingId, cust.accessToken);
+    await completeBooking(bookingId, prov.accessToken);
 
     const review1 = await call('POST', '/reviews', cust.accessToken, {
       bookingId,
@@ -392,9 +414,8 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
     });
     const bookingId = booking.body.data.id;
 
-    await call('PATCH', `/bookings/provider/${bookingId}/confirm`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/start`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/complete`, prov.accessToken);
+    await payBooking(bookingId, cust.accessToken);
+    await completeBooking(bookingId, prov.accessToken);
 
     const review = await call('POST', '/reviews', cust.accessToken, {
       bookingId,
@@ -433,9 +454,8 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
     });
     const bookingId = booking.body.data.id;
 
-    await call('PATCH', `/bookings/provider/${bookingId}/confirm`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/start`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/complete`, prov.accessToken);
+    await payBooking(bookingId, cust.accessToken);
+    await completeBooking(bookingId, prov.accessToken);
 
     const review = await call('POST', '/reviews', cust.accessToken, {
       bookingId,
@@ -476,9 +496,8 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
     });
     const bookingId = booking.body.data.id;
 
-    await call('PATCH', `/bookings/provider/${bookingId}/confirm`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/start`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/complete`, prov.accessToken);
+    await payBooking(bookingId, cust.accessToken);
+    await completeBooking(bookingId, prov.accessToken);
 
     const review = await call('POST', '/reviews', cust.accessToken, {
       bookingId,
@@ -528,9 +547,8 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
     });
     const bookingId = booking.body.data.id;
 
-    await call('PATCH', `/bookings/provider/${bookingId}/confirm`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/start`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bookingId}/complete`, prov.accessToken);
+    await payBooking(bookingId, cust.accessToken);
+    await completeBooking(bookingId, prov.accessToken);
 
     const review = await call('POST', '/reviews', cust.accessToken, {
       bookingId,
@@ -553,7 +571,7 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
 
   // --- Ranking calculations ----------------------------------------------
 
-  it('calculates quality score with all 8 components', async () => {
+  it('calculates quality score with all 7 components', async () => {
     const cust = await register('CUSTOMER', `rk_cust_${Date.now()}@example.com`);
     const provEmail = `rk_prov_${Date.now()}@example.com`;
     const prov = await register('PROVIDER', provEmail);
@@ -574,9 +592,8 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
         deliveryType: 'AT_PROVIDER_LOCATION',
       });
       const bid = booking.body.data.id;
-      await call('PATCH', `/bookings/provider/${bid}/confirm`, prov.accessToken);
-      await call('PATCH', `/bookings/provider/${bid}/start`, prov.accessToken);
-      await call('PATCH', `/bookings/provider/${bid}/complete`, prov.accessToken);
+      await payBooking(bid, c.accessToken);
+      await completeBooking(bid, prov.accessToken);
 
       await call('POST', '/reviews', c.accessToken, {
         bookingId: bid,
@@ -655,9 +672,8 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
       deliveryType: 'AT_PROVIDER_LOCATION',
     });
     const bid = booking.body.data.id;
-    await call('PATCH', `/bookings/provider/${bid}/confirm`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bid}/start`, prov.accessToken);
-    await call('PATCH', `/bookings/provider/${bid}/complete`, prov.accessToken);
+    await payBooking(bid, c.accessToken);
+    await completeBooking(bid, prov.accessToken);
 
     await call('POST', '/reviews', c.accessToken, {
       bookingId: bid,

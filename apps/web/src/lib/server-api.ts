@@ -49,6 +49,17 @@ export interface PublicProviderProfile {
   services: PublicProviderService[];
   portfolio: { id: string; title: string; description: string | null; images: { key: string; url: string }[] | null; link: string | null }[];
   verification: { verified: boolean; level: string | null; verifiedAt: string | null };
+  reviews: { overall: number; total: number; completionRate: number; customersServed: number; responseRate: number };
+}
+
+export interface PublicReview {
+  id: string;
+  overall: number;
+  title: string | null;
+  body: string | null;
+  dimensions: { id: string; name: string; score: number }[];
+  response: { id: string; body: string } | null;
+  createdAt: string;
 }
 
 export async function fetchProviders(): Promise<{ data: PublicProviderSummary[]; meta: { total: number; pages: number } }> {
@@ -70,6 +81,20 @@ export async function fetchProvider(slug: string): Promise<PublicProviderProfile
     return json.data;
   } catch {
     return null;
+  }
+}
+
+export async function fetchProviderReviews(providerId: string): Promise<PublicReview[]> {
+  try {
+    const res = await fetch(
+      `${API_URL}/api/v1/reviews/provider/${encodeURIComponent(providerId)}?pageSize=10&status=APPROVED`,
+      { cache: 'no-store' },
+    );
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data: { data: PublicReview[] } };
+    return json.data?.data ?? [];
+  } catch {
+    return [];
   }
 }
 

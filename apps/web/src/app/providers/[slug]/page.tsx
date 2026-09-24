@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { fetchProvider, formatPrice } from '@/lib/server-api';
+import { fetchProvider, fetchProviderReviews, formatPrice } from '@/lib/server-api';
 
 interface PageProps {
   params: { slug: string };
@@ -28,6 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ProviderPage({ params }: PageProps) {
   const p = await fetchProvider(params.slug);
   if (!p) notFound();
+  const reviews = await fetchProviderReviews(p.id);
 
   const jsonLd = {
     '@context': 'https://schema.org',

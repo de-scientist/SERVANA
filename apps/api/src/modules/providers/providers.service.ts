@@ -430,7 +430,10 @@ export class ProvidersService {
     }
 
     const [reviews, bookings] = await Promise.all([
-      this.prisma.review.findMany({ where: { providerId: profile.id, status: 'APPROVED' } }),
+      this.prisma.review.findMany({
+        where: { providerId: profile.id, status: 'APPROVED' },
+        include: { response: { select: { id: true } } },
+      }),
       this.prisma.booking.findMany({ where: { providerId: profile.id } }),
     ]);
 
@@ -441,8 +444,10 @@ export class ProvidersService {
     const totalBookings = bookings.length;
     const completionRate = totalBookings > 0 ? Math.round((completedBookings / totalBookings) * 100) : 0;
     const customersServed = new Set(bookings.map((b) => b.customerId).filter(Boolean)).size;
+    const responded = reviews.filter((r) => (r as any).response !== null).length;
+    const responseRate = reviews.length > 0 ? Math.round((responded / reviews.length) * 100) : 0;
 
-    return this.mapPublicProfile(profile, { overallAvg, totalReviews: reviews.length, customersServed, completionRate });
+    return this.mapPublicProfile(profile, { overallAvg, totalReviews: reviews.length, customersServed, completionRate, responseRate });
   }
 
   async getPublicService(id: string) {
@@ -861,7 +866,7 @@ export class ProvidersService {
       verification: { status: string; level: string; verifiedAt: Date | null } | null;
       user: { name: string; profileImage: string | null };
     },
-    summary?: { overallAvg: number; totalReviews: number; customersServed: number; completionRate: number },
+    summary?: { overallAvg: number; totalReviews: number; customersServed: number; completionRate: number; responseRate: number },
   ) {
     return {
       id: p.id,
@@ -899,6 +904,7 @@ export class ProvidersService {
         total: summary?.totalReviews ?? 0,
         completionRate: summary?.completionRate ?? 0,
         customersServed: summary?.customersServed ?? 0,
+        responseRate: summary?.responseRate ?? 0,
       },
       availability: { placeholder: true },
       booking: { cta: true, enabled: false },

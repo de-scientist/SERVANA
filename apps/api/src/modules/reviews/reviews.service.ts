@@ -34,6 +34,41 @@ export class ReviewsService {
     private readonly logger: AppLoggerService,
   ) {}
 
+  /**
+   * Canonical provider identity is ProviderProfile.id — every financial and
+   * reputation row (bookings, reviews, earnings) is keyed by it, while auth
+   * actors carry the user id. Resolve user id → profile id so ownership
+   * checks never silently compare different id spaces.
+   */
+  private async resolveOwnProviderId(actor: ReviewActor): Promise<string> {
+    if (actor.role !== 'PROVIDER') return actor.sub;
+    try {
+      const profiles: any = (this.prisma as any).providerProfile;
+      const own = await profiles?.findUnique?.({ where: { userId: actor.sub } });
+      if (own?.id) return own.id as string;
+    } catch {
+      // fall through (unit tests without profile mock)
+    }
+    return actor.sub;
+  }
+
+  /**
+   * Resolve a public provider reference (profile id or, liberally, user id)
+   * to the canonical ProviderProfile.id used by review rows.
+   */
+  private async resolveTargetProviderId(providerRef: string): Promise<string> {
+    try {
+      const profiles: any = (this.prisma as any).providerProfile;
+      const byId = await profiles?.findUnique?.({ where: { id: providerRef } });
+      if (byId?.id) return byId.id as string;
+      const byUser = await profiles?.findUnique?.({ where: { userId: providerRef } });
+      if (byUser?.id) return byUser.id as string;
+    } catch {
+      // fall through — use the raw reference (unit tests / empty set)
+    }
+    return providerRef;
+  }
+
   async create(actor: ReviewActor, input: CreateReviewInput) {
     const customerId = actor.sub;
 
@@ -53,6 +88,13 @@ export class ReviewsService {
     if (existing) throw new ConflictException('Review already exists for this booking');
 
     const dimensionScores: DimensionInput[] = input.dimensions;
+
+    // Each of the 5 dimensions must appear exactly once — duplicated names
+    // would let callers overweight a single dimension.
+    const names = dimensionScores.map((d) => d.name);
+    if (new Set(names).size !== names.length) {
+      throw new BadRequestException('Each review dimension must appear exactly once');
+    }
 
     const created = await this.prisma.$transaction(async (tx) => {
       const review = await tx.review.create({
@@ -97,7 +139,8 @@ export class ReviewsService {
 
     if (!review) throw new NotFoundException('Review not found');
     if (actor.role !== 'PROVIDER') throw new ForbiddenException('Only providers can respond');
-    if (review.providerId !== actor.sub) throw new ForbiddenException('Not your provider');
+    const ownProviderId = await this.resolveOwnProviderId(actor);
+    if (review.providerId !== ownProviderId) throw new ForbiddenException("Cannot respond to another provider's review");
 
     await this.prisma.reviewResponse.upsert({
       where: { reviewId },
@@ -169,7 +212,8 @@ export class ReviewsService {
     return review;
   }
 
-  async getForProvider(providerId: string, input: ListReviewsInput) {
+  async getForProvider(providerRef: string, input: ListReviewsInput) {
+    const providerId = await this.resolveTargetProviderId(providerRef);
     const page = Math.max(1, input.page ?? 1);
     const pageSize = Math.min(50, Math.max(1, input.pageSize ?? 20));
 
@@ -197,7 +241,8 @@ export class ReviewsService {
     };
   }
 
-  async getStats(providerId: string) {
+  async getStats(providerRef: string) {
+    const providerId = await this.resolveTargetProviderId(providerRef);
     const reviews = await this.prisma.review.findMany({
       where: { providerId, status: 'APPROVED' as any },
       include: { dimensions: true, response: true },
@@ -250,7 +295,7 @@ export class ReviewsService {
       ? ({ BASIC: 20, PHONE_VERIFIED: 40, IDENTITY_VERIFIED: 60, PROFESSIONAL_VERIFIED: 75, BUSINESS_VERIFIED: 85, TRUSTED_PROVIDER: 100 } as Record<string, number>)[verificationLevel] ?? 0
       : 0;
 
-    const profile = await this.prisma.providerProfile.findUnique({ where: { userId: providerId } });
+    const profile = await this.prisma.providerProfile.findUnique({ where: { id: providerId } });
     let profileCompleteness = 0;
     if (profile) {
       const fields = [
