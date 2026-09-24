@@ -124,7 +124,12 @@ export class ForecastService {
       take: 10000,
     });
     const ids = [...new Set(bookings.map((b) => b.customerId))].slice(0, 200);
-    const scored = [];
+    const scored: Array<{
+      customerId: string;
+      risk: ChurnRisk;
+      daysSinceLastBooking: number | null;
+      completedBookings: number;
+    }> = [];
     for (const id of ids) {
       try {
         const s = await this.analytics.churnScore(id);

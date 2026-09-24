@@ -885,6 +885,7 @@ model Referral {
   campaignId     String?
   firstBookingId String?
   rewardStatus   RewardStatus  @default(PENDING)
+  createdAt      DateTime      @default(now())
 }
 
 enum RewardStatus {
