@@ -17,6 +17,7 @@ import {
   ModerateReviewInput,
   ListReviewsInput,
 } from './dtos/review.schema';
+import { createHash } from 'crypto';
 
 export interface ReviewActor {
   sub: string;
@@ -345,10 +346,15 @@ export class ReviewsService {
   }
 
   private mapReview(r: any) {
+    // SECURITY/PII: public review reads must never expose raw customerId
+    // (allows cross-referencing accounts). Return an opaque, stable pseudonym.
+    const customerRef = r.customerId
+      ? `cus_${createHash('sha256').update(String(r.customerId)).digest('hex').slice(0, 12)}`
+      : null;
     return {
       id: r.id,
       bookingId: r.bookingId,
-      customerId: r.customerId,
+      customerRef,
       providerId: r.providerId,
       overall: r.overall,
       title: r.title,

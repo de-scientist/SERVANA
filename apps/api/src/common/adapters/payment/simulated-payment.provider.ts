@@ -47,11 +47,22 @@ export abstract class SimulatedPaymentProvider implements PaymentProvider {
       // Production: verify HMAC with the provider secret. Hard fail by default.
       return false;
     }
-    void rawBody;
     const configured = process.env.MPESA_WEBHOOK_SECRET;
     if (configured) {
-      // A configured secret must match — even in dev/test. No backdoors.
-      return signature === configured;
+      // SECURITY: a configured secret must match via HMAC-SHA256 over the
+      // exact raw body, compared in constant time. No plain-text backdoors.
+      if (!signature) return false;
+      try {
+        const { createHmac, timingSafeEqual } = await import('crypto');
+        const expected = createHmac('sha256', configured).update(rawBody, 'utf8').digest();
+        // Accept either raw hex signature or `sha256=<hex>` (common PSP form).
+        const hex = signature.startsWith('sha256=') ? signature.slice(7) : signature;
+        const actual = Buffer.from(hex, 'hex');
+        if (actual.length !== expected.length) return false;
+        return timingSafeEqual(actual, expected);
+      } catch {
+        return false;
+      }
     }
     // No secret configured (local dev only): accept unsigned callbacks.
     return true;

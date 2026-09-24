@@ -30,7 +30,20 @@ import {
   providerAssistSchema,
 } from './dto/assistant.schema';
 
-type Actor = { sub: string; role: string };
+type Actor = { sub: string; roles?: string[] };
+
+function hasRole(user: Actor, ...roles: string[]): boolean {
+  const actual = user.roles ?? [];
+  return roles.some((r) => actual.includes(r));
+}
+
+function primaryRole(user: Actor): string {
+  if (hasRole(user, 'SUPER_ADMIN')) return 'SUPER_ADMIN';
+  if (hasRole(user, 'ADMIN')) return 'ADMIN';
+  if (hasRole(user, 'SUPPORT')) return 'SUPPORT';
+  if (hasRole(user, 'PROVIDER')) return 'PROVIDER';
+  return 'CUSTOMER';
+}
 
 @Controller()
 export class AIController {
@@ -115,7 +128,9 @@ export class AIController {
     @CurrentUser() user: Actor,
     @Body(new ZodValidationPipe(providerAssistSchema)) body: any,
   ) {
-    if (user.role !== 'PROVIDER') {
+    // SECURITY: fixed `user.role` (always undefined) check — derive from
+    // `roles[]`. Providers are scoped to their OWN profile server-side.
+    if (!hasRole(user, 'PROVIDER', 'ADMIN', 'SUPER_ADMIN')) {
       const err: any = new Error('Providers use this for their own profile.');
       err.status = 403;
       throw err;
@@ -194,7 +209,7 @@ export class AIController {
     @Body(new ZodValidationPipe(marketingDraftSchema)) body: any,
   ) {
     // Providers draft for their OWN profile only (resolved server-side).
-    if (user.role !== 'PROVIDER') {
+    if (!hasRole(user, 'PROVIDER', 'ADMIN', 'SUPER_ADMIN')) {
       const err: any = new Error('Providers draft for their own profile.');
       err.status = 403;
       throw err;
@@ -213,6 +228,19 @@ export class AIController {
     @CurrentUser() user: Actor,
     @Body(new ZodValidationPipe(reviewInsightsSchema)) body: any,
   ) {
+    // SECURITY: providers may only view insights for their OWN profile —
+    // previously any provider could pass an arbitrary providerId (IDOR).
+    if (hasRole(user, 'PROVIDER') && !hasRole(user, 'ADMIN', 'SUPER_ADMIN')) {
+      const profile = await this.prisma.providerProfile.findUnique({
+        where: { userId: user.sub },
+        select: { id: true },
+      });
+      if (!profile || profile.id !== body.providerId) {
+        const err: any = new Error('Cannot view insights for another provider');
+        err.status = 403;
+        throw err;
+      }
+    }
     return { data: await this.analytics.reviewInsights(body.providerId) };
   }
 
@@ -245,13 +273,26 @@ export class AIController {
     @Param('id') id: string,
     @Body(new ZodValidationPipe(reviewProposalSchema)) body: any,
   ) {
-    return { data: await this.actions.review(user.sub, user.role, id, body) };
+    // SECURITY: derive admin role from `roles[]`, never `user.role`.
+    const status = primaryRole(user);
+    if (status !== 'ADMIN' && status !== 'SUPER_ADMIN') {
+      const err: any = new Error('Only admins can review AI action proposals');
+      err.status = 403;
+      throw err;
+    }
+    return { data: await this.actions.review(user.sub, status, id, body) };
   }
 
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Post('admin/ai/actions/:id/execute')
   async executeAction(@CurrentUser() user: Actor, @Param('id') id: string) {
-    return { data: await this.actions.execute(user.sub, user.role, id) };
+    const status = primaryRole(user);
+    if (status !== 'ADMIN' && status !== 'SUPER_ADMIN') {
+      const err: any = new Error('Only admins can review AI action proposals');
+      err.status = 403;
+      throw err;
+    }
+    return { data: await this.actions.execute(user.sub, status, id) };
   }
 
   // --- cost + oversight -------------------------------------------------------------------------------
@@ -273,12 +314,16 @@ export class AIController {
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Get('admin/ai/forecast/demand')
   async demandForecast(@Query('categoryId') categoryId?: string, @Query('city') city?: string) {
-    return { data: await this.forecast.demandForecast({ categoryId, city }) };
+    // SECURITY: sanitize free-form filters (length-cap, trim) before use.
+    const safe = (v?: string) => (typeof v === 'string' ? v.trim().slice(0, 120) || undefined : undefined);
+    return { data: await this.forecast.demandForecast({ categoryId: safe(categoryId), city: safe(city) }) };
   }
 
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Get('admin/ai/forecast/churn-watchlist')
   async churnWatchlist(@Query('limit') limit?: string) {
-    return { data: await this.forecast.churnWatchlist(limit ? Number(limit) : undefined) };
+    const n = limit ? Number(limit) : undefined;
+    const clamped = typeof n === 'number' && Number.isFinite(n) ? Math.min(100, Math.max(1, Math.floor(n))) : undefined;
+    return { data: await this.forecast.churnWatchlist(clamped) };
   }
 }

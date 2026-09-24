@@ -64,8 +64,9 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, Number(process.env.BCRYPT_ROUNDS ?? 10));
     const created = await this.users.create(dto.email, passwordHash, dto.name, dto.phone);
     await this.rbac.assignRole(created.id, 'CUSTOMER');
+    // SECURITY: only CUSTOMER/PROVIDER are self-assignable (enforced by
+    // registerSchema). Privileged roles must be granted by an admin tool.
     if (dto.role === 'PROVIDER') await this.rbac.assignRole(created.id, 'PROVIDER');
-    if (dto.role === 'SUPER_ADMIN') await this.rbac.assignRole(created.id, 'SUPER_ADMIN');
 
     const roles = await this.users.getRoles(created.id);
     const verifyToken = generateToken();

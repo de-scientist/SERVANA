@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -9,9 +10,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { z } from 'zod';
 import { VerificationService } from './verification.service';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from '../providers/dto/provider.schema';
 import {
   submitVerificationSchema,
   reviewVerificationSchema,
@@ -20,6 +23,8 @@ import {
   type ReviewVerificationInput,
   type ListVerificationsInput,
 } from './dto/verification.schema';
+
+const uploadBodySchema = z.object({ kind: z.string().min(1).max(60) });
 
 @Controller()
 export class VerificationController {
@@ -41,16 +46,29 @@ export class VerificationController {
     return { data: await this.verification.getOwn(user.sub) };
   }
 
+  // SECURITY: mirror the hardened providers upload pattern — reject oversized
+  // / mistyped payloads BEFORE buffering into memory (DoS + malware vector).
   @Post('providers/me/verification/documents')
   @Auth('PROVIDER')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+      fileFilter: (_req, file, cb) => {
+        if ((ALLOWED_UPLOAD_TYPES as readonly string[]).includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException('Unsupported file type'), false);
+        }
+      },
+    }),
+  )
   async uploadDocument(
     @CurrentUser() user: { sub: string },
     @UploadedFile() file: { buffer: Buffer; mimetype: string; originalname?: string } | undefined,
-    @Body() body: { kind?: string },
+    @Body(new ZodValidationPipe(uploadBodySchema)) body: { kind: string },
   ) {
-    if (!file) throw new Error('No file provided');
-    if (!body.kind) throw new Error('Document kind is required');
+    if (!file) throw new BadRequestException('No file provided');
+    if (!body.kind) throw new BadRequestException('Document kind is required');
     return await this.verification.uploadDocument(user.sub, file, body.kind);
   }
 

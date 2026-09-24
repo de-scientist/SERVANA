@@ -24,17 +24,21 @@ export class PaymentController {
     return { data: await this.payment.initiate(actor, body) };
   }
 
-  @Auth('CUSTOMER', 'ADMIN', 'SUPPORT')
+  // SECURITY: payment detail carries amounts + ledger data — owner and
+  // ADMIN/SUPER_ADMIN only. SUPPORT uses aggregated dashboards, not raw rows.
+  @Auth('CUSTOMER', 'ADMIN', 'SUPER_ADMIN')
   @Get(':id')
   async detail(@CurrentUser() user: { sub: string; roles: string[] }, @Param('id') id: string) {
     const actor: PaymentActor = {
       sub: user.sub,
-      role: user.roles.includes('ADMIN') ? 'ADMIN' : user.roles.includes('SUPPORT') ? 'SUPPORT' : 'CUSTOMER',
+      role: user.roles.includes('SUPER_ADMIN') ? 'SUPER_ADMIN' : user.roles.includes('ADMIN') ? 'ADMIN' : 'CUSTOMER',
     };
     return { data: await this.payment.getForCustomer(actor, id) };
   }
 
-  @Auth('CUSTOMER', 'ADMIN', 'SUPPORT')
+  // SECURITY: refunds move money — admin-only. Customers request refunds
+  // via disputes/support; they can never self-refund (privilege + ledger risk).
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @Post(':id/refund')
   async refund(
     @CurrentUser() user: { sub: string; roles: string[] },
@@ -43,7 +47,7 @@ export class PaymentController {
   ) {
     const actor: PaymentActor = {
       sub: user.sub,
-      role: user.roles.includes('ADMIN') ? 'ADMIN' : user.roles.includes('SUPPORT') ? 'SUPPORT' : 'CUSTOMER',
+      role: user.roles.includes('SUPER_ADMIN') ? 'SUPER_ADMIN' : 'ADMIN',
     };
     return { data: await this.payment.refund(actor, id, body.reason) };
   }

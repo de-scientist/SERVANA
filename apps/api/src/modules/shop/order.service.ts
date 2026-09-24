@@ -52,6 +52,9 @@ const NEXT_STEP: Record<string, string> = {
 };
 
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'];
+// SECURITY: money/state mutations (advance, staff-cancel, refund) are
+// ADMIN/SUPER_ADMIN only. SUPPORT is read-only (list/inspect) + customer care.
+const MONEY_ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
 
 @Injectable()
 export class OrderService {
@@ -370,7 +373,7 @@ export class OrderService {
   // --- fulfilment ------------------------------------------------------------------
 
   async advance(actor: OrderActor, id: string, input: AdvanceOrderInput) {
-    if (!ADMIN_ROLES.includes(actor.role)) {
+    if (!MONEY_ADMIN_ROLES.includes(actor.role)) {
       throw new ForbiddenException('Only fulfilment staff can advance orders');
     }
     const order = await this.prisma.order.findUnique({ where: { id } });
@@ -396,10 +399,17 @@ export class OrderService {
       include: { items: true, payment: true },
     });
     if (!order) throw new NotFoundException('Order not found');
-    const isAdmin = ADMIN_ROLES.includes(actor.role);
-    if (!isAdmin && order.customerId !== actor.sub) {
+    // SECURITY: customers may cancel only their OWN unpaid orders (enforced
+    // below); any staff cancel of another/paid order requires MONEY role.
+    const isMoneyAdmin = MONEY_ADMIN_ROLES.includes(actor.role);
+    const isReader = ADMIN_ROLES.includes(actor.role);
+    if (!isReader && order.customerId !== actor.sub) {
       throw new ForbiddenException('Not your order');
     }
+    if (isReader && !isMoneyAdmin && order.customerId !== actor.sub) {
+      throw new ForbiddenException('Only admins can cancel this order');
+    }
+    const isAdmin = isMoneyAdmin;
     if (!ORDER_TRANSITIONS[order.status]?.includes('CANCELLED')) {
       throw new BadRequestException(`Order in status ${order.status} cannot be cancelled`);
     }
@@ -451,7 +461,7 @@ export class OrderService {
 
   /** Paid-money returns: admin-only, delegates ledger reversal to payments. */
   async refund(actor: OrderActor, id: string, reason?: string) {
-    if (!ADMIN_ROLES.includes(actor.role)) {
+    if (!MONEY_ADMIN_ROLES.includes(actor.role)) {
       throw new ForbiddenException('Only admins can refund orders');
     }
     const order = await this.prisma.order.findUnique({

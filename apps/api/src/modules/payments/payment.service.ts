@@ -577,14 +577,16 @@ export class PaymentService {
   // --- refund ---------------------------------------------------------------
 
   async refund(actor: PaymentActor, paymentId: string, reason?: string) {
+    // SECURITY (defense in depth): refunds are admin-only even if a caller
+    // bypasses the controller guard. Customers must go through disputes.
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only admins can issue refunds');
+    }
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
       include: { booking: true },
     });
     if (!payment) throw new NotFoundException('Payment not found');
-    if (actor.role === 'CUSTOMER' && payment.customerId !== actor.sub) {
-      throw new ForbiddenException('Not your payment');
-    }
     if (payment.status !== 'SUCCESSFUL') {
       throw new BadRequestException('Only a successful payment can be refunded');
     }
@@ -687,7 +689,7 @@ export class PaymentService {
   async getForCustomer(actor: PaymentActor, id: string) {
     const p = await this.prisma.payment.findUnique({ where: { id }, include: this.paymentDetailInclude() });
     if (!p) throw new NotFoundException('Payment not found');
-    if (p.customerId !== actor.sub && actor.role !== 'ADMIN' && actor.role !== 'SUPPORT') {
+    if (p.customerId !== actor.sub && actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Not your payment');
     }
     return this.mapPaymentDetail(p);

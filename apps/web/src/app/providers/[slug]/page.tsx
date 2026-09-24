@@ -48,7 +48,9 @@ export default async function ProviderPage({ params }: PageProps) {
 
   return (
     <main className="container py-10">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {/* SECURITY: escape `<`/`>`/`&` so provider-controlled text cannot break
+          out of the JSON-LD script block (`</script>` injection). */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026') }} />
 
       <Link href="/providers" className="text-sm text-primary hover:underline">
         ← All providers

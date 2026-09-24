@@ -55,7 +55,7 @@ export class ThrottlerGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest<{ ip?: string; method?: string; url?: string }>();
+    const req = context.switchToHttp().getRequest<{ ip?: string; method?: string; url?: string; path?: string }>();
     const handler = context.getHandler();
     const cls = context.getClass();
 
@@ -66,8 +66,19 @@ export class ThrottlerGuard implements CanActivate {
         ttl: this.defaultTtl,
       };
 
-    const key = `${req.ip ?? 'unknown'}:${req.method ?? 'GET'}:${req.url ?? ''}`;
+    // SECURITY: key on method+path WITHOUT query string — prevents bucket
+    // explosion from unique queries and keeps PII (tokens, emails in query)
+    // out of keys and log lines.
+    const rawUrl = req.path ?? (req.url ?? '').split('?')[0];
+    const key = `${req.ip ?? 'unknown'}:${req.method ?? 'GET'}:${rawUrl}`;
     const now = Date.now();
+    // Opportunistic eviction of expired buckets (bounds memory growth).
+    if (this.buckets.size > 5000) {
+      for (const [k, b] of this.buckets) {
+        if (b.resetAt <= now) this.buckets.delete(k);
+        if (this.buckets.size <= 4000) break;
+      }
+    }
     const bucket = this.buckets.get(key);
 
     if (!bucket || bucket.resetAt <= now) {

@@ -17,6 +17,8 @@ import {
   ListVerificationsInput,
 } from './dto/verification.schema';
 import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES } from '../providers/dto/provider.schema';
+import { ConflictException as Conflict, BadRequestException } from '@nestjs/common';
+import { sniffMatches } from '../providers/providers.service';
 
 @Injectable()
 export class VerificationService {
@@ -98,8 +100,16 @@ export class VerificationService {
     if (!ALLOWED_UPLOAD_TYPES.includes(file.mimetype as (typeof ALLOWED_UPLOAD_TYPES)[number])) {
       throw new ConflictException('Unsupported file type');
     }
+    // SECURITY: client mimetypes are untrusted — verify magic bytes match,
+    // blocking polyglot/masqueraded executables passed off as images/PDFs.
+    if (!sniffMatches(file.buffer, file.mimetype)) {
+      throw new Conflict('File content does not match its declared type');
+    }
     if (file.buffer.byteLength > MAX_UPLOAD_BYTES) {
       throw new ConflictException('File too large');
+    }
+    if (file.buffer.byteLength === 0) {
+      throw new BadRequestException('Empty file');
     }
     const verification = await this.prisma.providerVerification.findUnique({ where: { providerId } });
     if (!verification) throw new NotFoundException('Verification record not found');

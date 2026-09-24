@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { z } from 'zod';
 import { Auth, CurrentUser } from '../auth/guards/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { ProductService } from './product.service';
@@ -20,7 +21,25 @@ import {
   refundOrderSchema,
 } from './dto/shop.schema';
 
-type Actor = { sub: string; role: string };
+type JwtUser = { sub: string; roles?: string[] };
+
+/** SECURITY: derive the actor role from JWT `roles[]` (never `user.role`). */
+function toActor(user: JwtUser): { sub: string; role: string } {
+  const roles = user.roles ?? [];
+  const role = roles.includes('SUPER_ADMIN')
+    ? 'SUPER_ADMIN'
+    : roles.includes('ADMIN')
+      ? 'ADMIN'
+      : roles.includes('SUPPORT')
+        ? 'SUPPORT'
+        : roles.includes('PROVIDER')
+          ? 'PROVIDER'
+          : 'CUSTOMER';
+  return { sub: user.sub, role };
+}
+
+const promoCodeSchema = z.object({ code: z.string().trim().min(1).max(64) });
+const payOrderSchema = z.object({ method: z.enum(['MPESA', 'CARD', 'BANK', 'OTHER']).optional() });
 
 @Controller()
 export class ShopController {
@@ -52,85 +71,85 @@ export class ShopController {
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Get('cart')
-  async getCart(@CurrentUser() user: Actor) {
-    return { data: await this.cart.getCart({ sub: user.sub, role: user.role }) };
+  async getCart(@CurrentUser() user: JwtUser) {
+    return { data: await this.cart.getCart(toActor(user)) };
   }
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Post('cart/items')
-  async addItem(@CurrentUser() user: Actor, @Body(new ZodValidationPipe(addCartItemSchema)) body: any) {
-    return { data: await this.cart.addItem({ sub: user.sub, role: user.role }, body) };
+  async addItem(@CurrentUser() user: JwtUser, @Body(new ZodValidationPipe(addCartItemSchema)) body: any) {
+    return { data: await this.cart.addItem(toActor(user), body) };
   }
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Patch('cart/items/:id')
   async setQty(
-    @CurrentUser() user: Actor,
+    @CurrentUser() user: JwtUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateCartItemSchema)) body: any,
   ) {
-    return { data: await this.cart.setQty({ sub: user.sub, role: user.role }, id, body.qty) };
+    return { data: await this.cart.setQty(toActor(user), id, body.qty) };
   }
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Delete('cart/items/:id')
-  async removeItem(@CurrentUser() user: Actor, @Param('id') id: string) {
-    return { data: await this.cart.removeItem({ sub: user.sub, role: user.role }, id) };
+  async removeItem(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+    return { data: await this.cart.removeItem(toActor(user), id) };
   }
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Post('cart/promotions/validate')
-  async validatePromo(@CurrentUser() user: Actor, @Body() body: { code: string }) {
+  async validatePromo(@CurrentUser() user: JwtUser, @Body(new ZodValidationPipe(promoCodeSchema)) body: { code: string }) {
     if (!body?.code) throw new BadRequestException('code is required');
-    return { data: await this.orders.previewPromo({ sub: user.sub, role: user.role }, body.code) };
+    return { data: await this.orders.previewPromo(toActor(user), body.code) };
   }
 
   // --- orders (customer) ----------------------------------------------------------
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Post('orders/checkout')
-  async checkout(@CurrentUser() user: Actor, @Body(new ZodValidationPipe(checkoutSchema)) body: any) {
-    return { data: await this.orders.checkout({ sub: user.sub, role: user.role }, body) };
+  async checkout(@CurrentUser() user: JwtUser, @Body(new ZodValidationPipe(checkoutSchema)) body: any) {
+    return { data: await this.orders.checkout(toActor(user), body) };
   }
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Get('orders')
-  async listMine(@CurrentUser() user: Actor, @Query(new ZodValidationPipe(listOrdersSchema)) query: any) {
-    return this.orders.listMine({ sub: user.sub, role: user.role }, query);
+  async listMine(@CurrentUser() user: JwtUser, @Query(new ZodValidationPipe(listOrdersSchema)) query: any) {
+    return this.orders.listMine(toActor(user), query);
   }
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Get('orders/:id')
-  async getOrder(@CurrentUser() user: Actor, @Param('id') id: string) {
-    return { data: await this.orders.getMine({ sub: user.sub, role: user.role }, id) };
+  async getOrder(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+    return { data: await this.orders.getMine(toActor(user), id) };
   }
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Post('orders/:id/pay')
   async payOrder(
-    @CurrentUser() user: Actor,
+    @CurrentUser() user: JwtUser,
     @Param('id') id: string,
-    @Body() body: { method?: 'MPESA' | 'CARD' | 'BANK' | 'OTHER' },
+    @Body(new ZodValidationPipe(payOrderSchema)) body: { method?: 'MPESA' | 'CARD' | 'BANK' | 'OTHER' },
   ) {
-    return { data: await this.orders.pay({ sub: user.sub, role: user.role }, id, body?.method as any) };
+    return { data: await this.orders.pay(toActor(user), id, body?.method as any) };
   }
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Post('orders/:id/cancel')
   async cancelMine(
-    @CurrentUser() user: Actor,
+    @CurrentUser() user: JwtUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(cancelOrderSchema)) body: any,
   ) {
-    return { data: await this.orders.cancel({ sub: user.sub, role: user.role }, id, body) };
+    return { data: await this.orders.cancel(toActor(user), id, body) };
   }
 
   // --- admin -------------------------------------------------------------------------
 
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Post('admin/products')
-  async createProduct(@CurrentUser() user: Actor, @Body(new ZodValidationPipe(createProductSchema)) body: any) {
-    return { data: await this.products.create({ sub: user.sub, role: user.role }, body) };
+  async createProduct(@CurrentUser() user: JwtUser, @Body(new ZodValidationPipe(createProductSchema)) body: any) {
+    return { data: await this.products.create(toActor(user), body) };
   }
 
   @Auth('ADMIN', 'SUPER_ADMIN')
@@ -142,77 +161,79 @@ export class ShopController {
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Patch('admin/products/:id')
   async updateProduct(
-    @CurrentUser() user: Actor,
+    @CurrentUser() user: JwtUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(updateProductSchema)) body: any,
   ) {
-    return { data: await this.products.update({ sub: user.sub, role: user.role }, id, body) };
+    return { data: await this.products.update(toActor(user), id, body) };
   }
 
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Delete('admin/products/:id')
-  async archiveProduct(@CurrentUser() user: Actor, @Param('id') id: string) {
-    return { data: await this.products.archive({ sub: user.sub, role: user.role }, id) };
+  async archiveProduct(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+    return { data: await this.products.archive(toActor(user), id) };
   }
 
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Post('admin/products/:id/inventory')
   async setInventory(
-    @CurrentUser() user: Actor,
+    @CurrentUser() user: JwtUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(setInventorySchema)) body: any,
   ) {
-    return { data: await this.products.setInventory({ sub: user.sub, role: user.role }, id, body) };
+    return { data: await this.products.setInventory(toActor(user), id, body) };
   }
 
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Post('admin/cross-sell')
-  async createLink(@CurrentUser() user: Actor, @Body(new ZodValidationPipe(createCrossSellLinkSchema)) body: any) {
-    return { data: await this.products.createCrossSellLink({ sub: user.sub, role: user.role }, body) };
+  async createLink(@CurrentUser() user: JwtUser, @Body(new ZodValidationPipe(createCrossSellLinkSchema)) body: any) {
+    return { data: await this.products.createCrossSellLink(toActor(user), body) };
   }
 
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Delete('admin/cross-sell/:id')
-  async deleteLink(@CurrentUser() user: Actor, @Param('id') id: string) {
-    return { data: await this.products.deleteCrossSellLink({ sub: user.sub, role: user.role }, id) };
+  async deleteLink(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+    return { data: await this.products.deleteCrossSellLink(toActor(user), id) };
   }
 
   @Auth('ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Get('admin/orders')
   async listAll(
-    @CurrentUser() user: Actor,
+    @CurrentUser() user: JwtUser,
     @Query(new ZodValidationPipe(listOrdersSchema)) query: any,
   ) {
-    return this.orders.listAll({ sub: user.sub, role: user.role }, query);
+    return this.orders.listAll(toActor(user), query);
   }
 
-  @Auth('ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  // SECURITY: fulfilment state changes and paid-money refunds are
+  // ADMIN/SUPER_ADMIN only — SUPPORT is read-only.
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @Post('admin/orders/:id/advance')
   async advance(
-    @CurrentUser() user: Actor,
+    @CurrentUser() user: JwtUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(advanceOrderSchema)) body: any,
   ) {
-    return { data: await this.orders.advance({ sub: user.sub, role: user.role }, id, body) };
+    return { data: await this.orders.advance(toActor(user), id, body) };
   }
 
-  @Auth('ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @Post('admin/orders/:id/cancel')
   async cancelAdmin(
-    @CurrentUser() user: Actor,
+    @CurrentUser() user: JwtUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(cancelOrderSchema)) body: any,
   ) {
-    return { data: await this.orders.cancel({ sub: user.sub, role: user.role }, id, body) };
+    return { data: await this.orders.cancel(toActor(user), id, body) };
   }
 
-  @Auth('ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @Post('admin/orders/:id/refund')
   async refundAdmin(
-    @CurrentUser() user: Actor,
+    @CurrentUser() user: JwtUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(refundOrderSchema)) body: any,
   ) {
-    return { data: await this.orders.refund({ sub: user.sub, role: user.role }, id, body?.reason) };
+    return { data: await this.orders.refund(toActor(user), id, body?.reason) };
   }
 }

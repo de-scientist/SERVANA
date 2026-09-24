@@ -45,8 +45,25 @@ export class UsersService {
     });
   }
 
+  /**
+   * SECURITY: existence check only — never returns secrets. Callers that need
+   * `passwordHash` (changePassword/changeEmail/login) query it explicitly via
+   * `findUnique` so hashes can never leak through a future direct return.
+   */
   async findById(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        profileImage: true,
+        status: true,
+        emailVerified: true,
+        createdAt: true,
+      },
+    });
     if (!user) throw new NotFoundException('User not found');
     return user;
   }

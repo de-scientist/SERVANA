@@ -261,7 +261,8 @@ export class PayoutService {
     actor: PayoutActor,
     input: { providerId: string; methodId: string; earningIds: string[]; currency?: string },
   ) {
-    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN' && actor.role !== 'SUPPORT') {
+    // SECURITY: money creation is ADMIN/SUPER_ADMIN only (SUPPORT read-only).
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Only admins can create manual payouts');
     }
     if (!input.earningIds || input.earningIds.length === 0) {
@@ -339,6 +340,11 @@ export class PayoutService {
   // --- process payout (PENDING → PROCESSING → SUCCESSFUL/FAILED) ---------
 
   async processPayout(actor: PayoutActor, payoutId: string) {
+    // SECURITY: providers must never self-approve/process their own payouts
+    // (would let a provider mint settlements). Admin-only, defense in depth.
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only admins can process payouts');
+    }
     const payout = await this.prisma.payout.findUnique({
       where: { id: payoutId },
       include: { items: { include: { earning: true } }, method: true } as any,
@@ -347,13 +353,6 @@ export class PayoutService {
 
     if ((payout as any).status !== 'PENDING') {
       throw new BadRequestException(`Cannot process payout in status ${(payout as any).status}`);
-    }
-
-    if (actor.role === 'PROVIDER') {
-      const own = await this.resolveOwnProviderId(actor);
-      if ((payout as any).providerId !== own && (payout as any).providerId !== actor.sub) {
-        throw new ForbiddenException('Cannot process this payout');
-      }
     }
 
     if (!((payout as any).items ?? []).length) {
@@ -420,6 +419,10 @@ export class PayoutService {
   // --- retry payout (FAILED → PENDING) with audit trail --------------------
 
   async retryPayout(actor: PayoutActor, payoutId: string) {
+    // SECURITY: retry re-queues money movement — admin-only.
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only admins can retry payouts');
+    }
     const payout = await this.prisma.payout.findUnique({ where: { id: payoutId } });
     if (!payout) throw new NotFoundException('Payout not found');
     if ((payout as any).status !== 'FAILED') {
@@ -450,7 +453,7 @@ export class PayoutService {
   // --- force-fail payout (admin, for testing) ------------------------------
 
   async failPayout(actor: PayoutActor, payoutId: string, reason: string) {
-    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN' && actor.role !== 'SUPPORT') {
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Only admins can force-fail payouts');
     }
     const payout = await this.prisma.payout.findUnique({ where: { id: payoutId } });
@@ -472,7 +475,7 @@ export class PayoutService {
   // --- reverse payout (SUCCESSFUL → REVERSED) ------------------------------
 
   async reversePayout(actor: PayoutActor, payoutId: string, reason?: string) {
-    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN' && actor.role !== 'SUPPORT') {
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Only admins can reverse payouts');
     }
     const payout = await this.prisma.payout.findUnique({
@@ -514,7 +517,7 @@ export class PayoutService {
   // --- manual adjustment (admin; every adjustment is audited) --------------
 
   async adjustPayout(actor: PayoutActor, payoutId: string, amountCents: bigint, reason: string) {
-    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN' && actor.role !== 'SUPPORT') {
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Only admins can adjust payouts');
     }
     if (!reason || !reason.trim()) {
