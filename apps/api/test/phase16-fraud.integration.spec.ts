@@ -26,6 +26,7 @@ import { ZodValidationPipe } from '../src/common/pipes/zod-validation.pipe';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { RbacService } from '../src/modules/rbac/rbac.service';
+import { NotificationsModule } from '../src/modules/notifications/notifications.module';
 
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? 'test_secret';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'test_refresh';
@@ -106,7 +107,7 @@ describe('Phase 16 · risk workflows (integration)', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
-        PrismaModule, QueueModule, RbacModule, AuditModule, StorageModule, LoggingModule, NotificationModule, AiModule,
+        PrismaModule, QueueModule, RbacModule, AuditModule, StorageModule, LoggingModule, NotificationsModule, AiModule,
         UsersModule, AuthModule, ProvidersModule, VerificationModule, AdminModule,
         AvailabilityModule, BookingsModule, PaymentsModule, ReviewsModule, RankingModule, AIModule, FraudModule,
       ],

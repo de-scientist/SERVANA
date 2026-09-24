@@ -12,6 +12,7 @@ import { NOTIFICATION_PROVIDER } from '../src/common/adapters/notification/notif
 import { AuthService } from '../src/modules/auth/auth.service';
 import { UsersService } from '../src/modules/users/users.service';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { NotificationsModule } from '../src/modules/notifications/notifications.module';
 
 interface SentMessage {
   to: string;
@@ -45,7 +46,7 @@ describe('Auth flow (integration, real Postgres)', () => {
         UsersModule,
         RbacModule,
         AuditModule,
-        NotificationModule,
+        NotificationsModule,
         PrismaModule,
 
         QueueModule,

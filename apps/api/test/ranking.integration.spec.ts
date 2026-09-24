@@ -23,6 +23,7 @@ import { ZodValidationPipe } from '../src/common/pipes/zod-validation.pipe';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { RbacService } from '../src/modules/rbac/rbac.service';
+import { NotificationsModule } from '../src/modules/notifications/notifications.module';
 
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? 'test_secret';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'test_refresh';
@@ -163,7 +164,7 @@ describe('Phase 8 · reviews & ranking (integration)', () => {
         AuditModule,
         StorageModule,
         LoggingModule,
-        NotificationModule,
+        NotificationsModule,
         UsersModule,
         AuthModule,
         ProvidersModule,

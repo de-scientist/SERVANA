@@ -25,6 +25,7 @@ import { ZodValidationPipe } from '../src/common/pipes/zod-validation.pipe';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { RbacService } from '../src/modules/rbac/rbac.service';
+import { NotificationsModule } from '../src/modules/notifications/notifications.module';
 
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? 'test_secret';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'test_refresh';
@@ -162,7 +163,7 @@ describe('Phase 10 · retention (integration)', () => {
     await call('POST', `/admin/verifications/${provProfile!.id}/review`, admin.accessToken, {
       decision: 'APPROVE', level: 'PROFESSIONAL_VERIFIED',
     });
-    return { prov, serviceId: svc.body.data.id, profile };
+    return { prov, serviceId: svc.body.data.id, profile: provProfile };
   }
 
   async function paidCompletedBooking(custToken: string, provToken: string, serviceId: string, hour: number) {
@@ -190,7 +191,7 @@ describe('Phase 10 · retention (integration)', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
-        PrismaModule, QueueModule, RbacModule, AuditModule, StorageModule, LoggingModule, NotificationModule,
+        PrismaModule, QueueModule, RbacModule, AuditModule, StorageModule, LoggingModule, NotificationsModule,
         UsersModule, AuthModule, ProvidersModule, VerificationModule, AdminModule,
         AvailabilityModule, BookingsModule, PaymentsModule, ReviewsModule, RankingModule,
         ShopModule, LoyaltyModule,
