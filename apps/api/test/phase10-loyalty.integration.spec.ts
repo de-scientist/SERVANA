@@ -288,14 +288,12 @@ describe('Phase 10 · retention (integration)', () => {
       // Earn up to 110: 10 signup + 5×20 bookings.
       const { prov, serviceId } = await setupVerifiedProvider(`p10redeemprov_${Date.now()}@example.com`);
       for (let i = 0; i < 5; i++) {
-        const c = i === 0 ? { accessToken: cust.accessToken } : await register('CUSTOMER', `p10r_${Date.now()}_${i}@example.com`);
         // Bookings must belong to the redeemer for points; reuse same customer with different slots.
         const booking = await call('POST', '/bookings', cust.accessToken, {
           providerServiceId: serviceId, startsAt: futureIso(10 + i), deliveryType: 'AT_PROVIDER_LOCATION',
         });
         const payRes = await call('POST', '/payments', cust.accessToken, { bookingId: booking.body.data.id });
         await capturePayment(payRes.body.data.providerRef, '200000');
-        void c;
       }
       const rich = await call('POST', '/loyalty/redeem', cust.accessToken, { rewardId: created.body.data.id });
       expect(rich.status).toBe(201);
