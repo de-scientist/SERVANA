@@ -103,7 +103,7 @@ export class VerificationService {
     // SECURITY: client mimetypes are untrusted — verify magic bytes match,
     // blocking polyglot/masqueraded executables passed off as images/PDFs.
     if (!sniffMatches(file.buffer, file.mimetype)) {
-      throw new Conflict('File content does not match its declared type');
+      throw new ConflictException('File content does not match its declared type');
     }
     if (file.buffer.byteLength > MAX_UPLOAD_BYTES) {
       throw new ConflictException('File too large');

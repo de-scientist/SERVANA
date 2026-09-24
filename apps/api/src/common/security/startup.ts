@@ -14,3 +14,22 @@ export function assertProductionSecrets(env: NodeJS.ProcessEnv = process.env): v
     );
   }
 }
+
+/**
+ * Non-fatal production hygiene checks. Unsigned payment callbacks are accepted
+ * by the simulated adapter only when NO webhook secret is configured, so a
+ * production boot without MPESA_WEBHOOK_SECRET is a money-forgery risk.
+ * Returns warning strings (empty when clean) so callers can log them.
+ */
+export function insecureIntegrationWarnings(env: NodeJS.ProcessEnv = process.env): string[] {
+  if (env.NODE_ENV !== 'production') return [];
+  const warnings: string[] = [];
+  if (!env.MPESA_WEBHOOK_SECRET) {
+    warnings.push('MPESA_WEBHOOK_SECRET is unset: payment webhooks cannot be authenticated');
+  }
+  const origins = (env.CORS_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean);
+  if (origins.length === 0) {
+    warnings.push('CORS_ORIGINS is unset: API boots with a localhost default — set explicit origins');
+  }
+  return warnings;
+}

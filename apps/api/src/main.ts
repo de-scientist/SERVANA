@@ -6,11 +6,12 @@ import { AppModule } from './app.module';
 import { AppLoggerService } from './common/logging/logger.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
-import { assertProductionSecrets } from './common/security/startup';
+import { assertProductionSecrets, insecureIntegrationWarnings } from './common/security/startup';
 
 async function bootstrap(): Promise<void> {
   const logger = new AppLoggerService('Bootstrap');
   assertProductionSecrets();
+  for (const w of insecureIntegrationWarnings()) logger.warn(`SECURITY: ${w}`);
   const app = await NestFactory.create(AppModule, { logger, rawBody: true });
   app.useLogger(logger);
   // SECURITY: hardened HTTP headers (HSTS in prod, no sniffing, framedeny,
@@ -22,7 +23,7 @@ async function bootstrap(): Promise<void> {
       hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
     }),
   );
-  app.disable('x-powered-by');
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
 
   const port = Number(process.env.API_PORT ?? 3001);
   const origins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
