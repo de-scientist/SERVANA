@@ -107,6 +107,7 @@ export default function AssistantPage() {
 
       {mode === 'chat' ? (
         <div className="mt-4">
+          {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
           <div className="space-y-3 rounded-lg border bg-card p-4">
             {turns.length === 0 && (
               <p className="text-sm text-muted-foreground">
@@ -222,6 +223,8 @@ export default function AssistantPage() {
           </li>
         ))}
       </ul>
+      </>
+      )}
     </main>
   );
 }
