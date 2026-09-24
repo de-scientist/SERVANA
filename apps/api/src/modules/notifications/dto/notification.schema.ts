@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const inboxQuerySchema = z.object({
-  unreadOnly: z.coerce.boolean().default(false),
+  unreadOnly: z.preprocess((v) => v === true || v === 'true', z.boolean().default(false)),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
