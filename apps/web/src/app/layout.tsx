@@ -41,6 +41,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/rewards" className="text-muted-foreground hover:text-foreground">
               Rewards
             </Link>
+            <Link href="/notifications" className="text-muted-foreground hover:text-foreground">
+              Notifications
+            </Link>
+            <Link href="/messages" className="text-muted-foreground hover:text-foreground">
+              Messages
+            </Link>
             <Link href="/earnings" className="text-muted-foreground hover:text-foreground">
               Earnings
             </Link>
