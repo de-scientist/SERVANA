@@ -4,8 +4,6 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AnalyticsService } from './analytics.service';
 import { rangeQuerySchema, eventsQuerySchema, trackAttributionSchema } from './dto/analytics.schema';
 
-type Actor = { sub: string; role: string };
-
 @Controller()
 export class AnalyticsController {
   constructor(private readonly analytics: AnalyticsService) {}
