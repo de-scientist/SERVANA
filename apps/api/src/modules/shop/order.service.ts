@@ -298,7 +298,7 @@ export class OrderService {
       entityId: id,
       before: { status: order.status },
       after: { status: 'CANCELLED' },
-      reason: input.reason ?? null,
+      reason: input.reason ?? undefined,
     });
 
     return this.getMine(actor, id);

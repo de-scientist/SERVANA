@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentGateway } from './payment.gateway';
 import { CommissionService } from './commission.service';
+import { findInventoryRow } from '../../common/inventory/inventory';
 import { PaymentMethod, PaymentWebhookEvent } from '../../common/adapters/payment/payment.provider';
 import { BookingStatus } from '@prisma/client';
 

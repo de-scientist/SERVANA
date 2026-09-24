@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductService } from './product.service';
 import { AddCartItemInput } from './dto/shop.schema';
@@ -60,22 +61,23 @@ export class CartService {
     }
 
     const cart = await this.getOrCreateCart(actor.sub);
-    await this.prisma.cartItem.upsert({
-      where: {
-        cartId_productId_variantId: {
-          cartId: cart.id,
-          productId: input.productId,
-          variantId: input.variantId ?? null,
-        },
+    const variantId = input.variantId ?? null;
+    // Serializable txn: concurrent adds can never duplicate a cart line.
+    await this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.cartItem.findFirst({
+          where: { cartId: cart.id, productId: input.productId, variantId },
+        });
+        if (existing) {
+          await tx.cartItem.update({ where: { id: existing.id }, data: { qty: { increment: input.qty } } });
+        } else {
+          await tx.cartItem.create({
+            data: { cartId: cart.id, productId: input.productId, variantId, qty: input.qty },
+          });
+        }
       },
-      create: {
-        cartId: cart.id,
-        productId: input.productId,
-        variantId: input.variantId ?? null,
-        qty: input.qty,
-      },
-      update: { qty: { increment: input.qty } },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     return this.getCart(actor);
   }
