@@ -9,7 +9,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaymentGateway } from './payment.gateway';
 import { CommissionService } from './commission.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { findInventoryRow } from '../../common/inventory/inventory';
+import { formatMoney } from '../../common/money/money';
 import { PaymentMethod, PaymentWebhookEvent } from '../../common/adapters/payment/payment.provider';
 import { BookingStatus } from '@prisma/client';
 
@@ -41,6 +43,7 @@ export class PaymentService {
     private readonly gateway: PaymentGateway,
     private readonly commission: CommissionService,
     private readonly loyalty: LoyaltyService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // --- initiate -------------------------------------------------------------
@@ -230,6 +233,7 @@ export class PaymentService {
             await this.setBookingStatus(payment.bookingId!, 'PENDING', null, 'SYSTEM', 'Payment failed');
           }
           // Order payments stay PENDING on the order: the customer may retry.
+          await this.notifyPaymentEvent(payment, 'PAYMENT_FAILED', { reason: 'declined by provider' });
           return { ok: true, failed: true };
         }
 
@@ -361,6 +365,7 @@ export class PaymentService {
           await this.setBookingStatus(booking.id, 'PAID', null, 'SYSTEM', 'Payment captured');
         }
         await tx.booking.update({ where: { id: booking.id }, data: { paymentStatus: 'SUCCESSFUL' } });
+        await this.notifyPaymentEvent(payment, 'PAYMENT_SUCCESSFUL');
 
         return { ok: true, captured: true };
       },
@@ -485,12 +490,47 @@ export class PaymentService {
       await tx.order.update({ where: { id: order.id }, data: { status: 'PAID' } });
       await tx.orderStatusHistory.create({ data: { orderId: order.id, from: 'PENDING', to: 'PAID' } });
     }
+    await this.notifyPaymentEvent(payment, 'PAYMENT_SUCCESSFUL');
 
     return { ok: true, captured: true };
   }
 
-  /** Release checkout reservations when the payment window expires. */
-  private async expireOrderHold(tx: Prisma.TransactionClient, orderId: string) {
+  /** Customer notice for payment outcomes (best-effort; never throws). */
+  private async notifyPaymentEvent(
+    payment: any,
+    event: 'PAYMENT_SUCCESSFUL' | 'PAYMENT_FAILED',
+    extra: Record<string, string> = {},
+  ) {
+    try {
+      let reference = payment.providerRef ?? String(payment.id).slice(0, 8);
+      if (payment.bookingId) {
+        const b = await this.prisma.booking.findUnique({
+          where: { id: payment.bookingId },
+          select: { reference: true },
+        });
+        if (b) reference = b.reference;
+      } else if (payment.orderId) {
+        reference = `order ${String(payment.orderId).slice(0, 8)}`;
+      }
+      const customer = await this.prisma.user.findUnique({
+        where: { id: payment.customerId },
+        select: { name: true },
+      });
+      await this.notifications.notify(event, {
+        userId: payment.customerId,
+        data: {
+          reference,
+          amount: formatMoney(payment.grossCents, payment.currency),
+          customerName: customer?.name ?? '',
+          ...extra,
+        },
+      });
+    } catch {
+      // notify() already swallows errors; this is belt-and-braces.
+    }
+  }
+
+  /** Release checkout reservations when the payment window expires. */  private async expireOrderHold(tx: Prisma.TransactionClient, orderId: string) {
     const order = await tx.order.findUnique({
       where: { id: orderId },
       include: { items: true },

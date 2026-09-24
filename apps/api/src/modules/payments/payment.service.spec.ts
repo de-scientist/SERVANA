@@ -117,12 +117,17 @@ function makeLoyalty() {
   } as any;
 }
 
-function service(prisma?: any, gateway?: any, commission?: any, loyalty?: any) {
+function makeNotifications() {
+  return { notify: jest.fn().mockResolvedValue([]) } as any;
+}
+
+function service(prisma?: any, gateway?: any, commission?: any, loyalty?: any, notifications?: any) {
   return new PaymentService(
     prisma ?? makePrisma(),
     gateway ?? makeGateway(),
     commission ?? makeCommission(),
     loyalty ?? makeLoyalty(),
+    notifications ?? makeNotifications(),
   );
 }
 

@@ -11,7 +11,9 @@ import { AuditService } from '../audit/audit.service';
 import { PaymentService } from '../payments/payment.service';
 import { ProductService } from './product.service';
 import { PromotionService } from '../loyalty/promotion.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { findInventoryRow } from '../../common/inventory/inventory';
+import { formatMoney } from '../../common/money/money';
 import {
   CheckoutInput,
   ListOrdersInput,
@@ -59,6 +61,7 @@ export class OrderService {
     private readonly payments: PaymentService,
     private readonly products: ProductService,
     private readonly promotions: PromotionService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // --- checkout ---------------------------------------------------------------
@@ -236,6 +239,18 @@ export class OrderService {
       entityId: order.id,
       after: { totalCents: order.totalCents.toString(), items: order.items.length },
     });
+
+    if (input.promoCode && order.discountCents > 0n) {
+      await this.notifications.notify('PROMOTION', {
+        userId: actor.sub,
+        data: {
+          discount: formatMoney(order.discountCents, order.currency),
+          promoCode: input.promoCode.trim().toUpperCase(),
+          orderId: order.id.slice(0, 8),
+          customerName: '',
+        },
+      });
+    }
 
     if (free) {
       return {

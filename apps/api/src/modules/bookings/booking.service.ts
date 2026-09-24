@@ -8,6 +8,9 @@ import {
 import { Prisma, BookingStatus, ServiceDeliveryType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReferralService } from '../loyalty/referral.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { QueueService, JOB_BOOKING_REMINDER } from '../queue/queue.service';
+import { formatMoney } from '../../common/money/money';
 import {
   assertTransition,
   cancelsBooking,
@@ -38,6 +41,8 @@ export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly referrals: ReferralService,
+    private readonly notifications: NotificationsService,
+    private readonly queue: QueueService,
   ) {}
 
   async create(actor: BookingActor, input: CreateBookingInput) {
@@ -114,7 +119,34 @@ export class BookingService {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
 
-      return this.mapBooking(booking.id);
+      const mapped = await this.mapBooking(booking.id);
+
+      // Communication (best-effort, never blocks booking): customer gets the
+      // creation notice and a 24h-before reminder is scheduled durably.
+      const customer = await this.prisma.user.findUnique({
+        where: { id: actor.sub },
+        select: { name: true },
+      });
+      await this.notifications.notify('BOOKING_CREATED', {
+        userId: actor.sub,
+        data: {
+          reference,
+          serviceName: ps.name,
+          startsAt: startsAt.toISOString(),
+          amount: formatMoney(ps.priceCents, ps.currency),
+          customerName: customer?.name ?? '',
+        },
+      });
+      const reminderIn = startsAt.getTime() - 24 * 3_600_000 - Date.now();
+      if (reminderIn > 0) {
+        await this.queue.add(
+          JOB_BOOKING_REMINDER,
+          { bookingId: booking.id },
+          { delay: reminderIn },
+        );
+      }
+
+      return mapped;
     } catch (err) {
       if (err instanceof ConflictException) throw err;
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034') {
@@ -213,7 +245,48 @@ export class BookingService {
     if (to === 'COMPLETED') {
       await this.referrals.qualifyOnBookingComplete(id);
     }
+    // Customer lifecycle notices (best-effort; notify() never throws).
+    if (to === 'CONFIRMED' || to === 'COMPLETED') {
+      const data = await this.bookingNotifyData(id, profile.businessName);
+      if (data) {
+        if (to === 'CONFIRMED') {
+          await this.notifications.notify('BOOKING_CONFIRMED', { userId: data.customerId, data });
+        } else {
+          await this.notifications.notify('SERVICE_COMPLETED', { userId: data.customerId, data });
+          await this.notifications.notify('REVIEW_REQUEST', { userId: data.customerId, data });
+        }
+      }
+    }
     return this.mapBooking(id);
+  }
+
+  /** Template data for customer booking notices (null when unresolvable). */
+  private async bookingNotifyData(
+    bookingId: string,
+    providerName?: string | null,
+  ): Promise<Record<string, string> | null> {
+    try {
+      const b = await this.prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: { providerService: { select: { name: true } } },
+      });
+      if (!b) return null;
+      const customer = await this.prisma.user.findUnique({
+        where: { id: b.customerId },
+        select: { name: true },
+      });
+      return {
+        reference: b.reference,
+        serviceName: (b as any).providerService?.name ?? 'your service',
+        startsAt: b.startsAt.toISOString(),
+        amount: formatMoney(b.priceCents, b.currency),
+        customerName: customer?.name ?? '',
+        customerId: b.customerId,
+        providerName: providerName ?? '',
+      };
+    } catch {
+      return null;
+    }
   }
 
   // --- cancellation ----------------------------------------------------------

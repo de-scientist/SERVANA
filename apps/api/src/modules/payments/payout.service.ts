@@ -8,6 +8,8 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { formatMoney } from '../../common/money/money';
 
 export interface PayoutActor {
   sub: string;
@@ -74,6 +76,7 @@ export class PayoutService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // --- provider identity ---------------------------------------------------
@@ -405,6 +408,7 @@ export class PayoutService {
             before: { status: 'PROCESSING' },
             after: { status: 'SUCCESSFUL', totalCents: totalPaidCents.toString(), failedCount: failedItems },
           });
+          await this.notifyPayoutCompleted(payout as any, totalPaidCents);
         }
 
         return this.mapPayout(await tx.payout.findUnique({ where: { id: payoutId }, include: { items: { include: { earning: true } }, method: true } as any }));
@@ -834,6 +838,29 @@ export class PayoutService {
   }
 
   // --- helpers -------------------------------------------------------------
+
+  /** Provider notice on settlement (best-effort; never throws). */
+  private async notifyPayoutCompleted(payout: any, totalCents: bigint) {
+    try {
+      const profile = await (this.prisma as any).providerProfile?.findUnique?.({
+        where: { id: payout.providerId },
+        select: { userId: true, businessName: true },
+      });
+      if (!profile?.userId) return;
+      const method = payout.methodId ? await this.prisma.payoutMethod.findUnique({ where: { id: payout.methodId } }) : null;
+      await this.notifications.notify('PAYOUT_COMPLETED', {
+        userId: profile.userId,
+        data: {
+          reference: payout.reference ?? payout.id.slice(0, 8),
+          amount: formatMoney(totalCents, payout.currency ?? 'KES'),
+          method: (method as any)?.type ?? 'payout method',
+          providerName: profile.businessName ?? '',
+        },
+      });
+    } catch {
+      // notify() already swallows errors; belt-and-braces.
+    }
+  }
 
   private mapPayout(p: any) {
     if (!p) return p;

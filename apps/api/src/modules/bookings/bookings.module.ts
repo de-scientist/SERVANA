@@ -3,9 +3,10 @@ import { BookingService } from './booking.service';
 import { CustomerBookingsController } from './customer-bookings.controller';
 import { ProviderBookingsController } from './provider-bookings.controller';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [LoyaltyModule],
+  imports: [LoyaltyModule, NotificationsModule],
   controllers: [CustomerBookingsController, ProviderBookingsController],
   providers: [BookingService],
   exports: [BookingService],

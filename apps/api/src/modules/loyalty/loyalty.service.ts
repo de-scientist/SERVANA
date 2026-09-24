@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export type LoyaltyEvent = 'BOOKING' | 'REVIEW' | 'REFERRAL' | 'PURCHASE' | 'SIGNUP';
 
@@ -48,6 +49,7 @@ export class LoyaltyService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async onModuleInit() {
@@ -131,6 +133,16 @@ export class LoyaltyService implements OnModuleInit {
       data: { balanceCents: { increment: BigInt(rule.points) } },
     });
     const tier = await this.refreshTier(db, account.id);
+    // Retention notice (best-effort; notify() never throws).
+    await this.notifications.notify('REWARD_EARNED', {
+      userId: input.userId,
+      data: {
+        points: String(rule.points),
+        reason: input.reason ?? EVENT_REASON[input.event],
+        balance: (account.balanceCents as bigint).toString(),
+        customerName: '',
+      },
+    });
     return { account: { ...account, tierId: tier.id }, transaction: txn, tier, duplicate: false };
   }
 

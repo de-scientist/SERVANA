@@ -927,10 +927,13 @@ model PromotionRedemption {
 
 model NotificationTemplate {
   id       String @id @default(uuid())
-  key      String @unique
-  channel  String
+  key      String @unique // e.g. BOOKING_CREATED:INAPP
+  event    String // e.g. BOOKING_CREATED
+  channel  String // INAPP | EMAIL | SMS | PUSH | WHATSAPP
   subject  String?
-  body     String
+  body     String // {{variable}} placeholders
+  active   Boolean @default(true)
+  @@index([event, active])
 }
 
 model Notification {
@@ -938,10 +941,15 @@ model Notification {
   userId     String
   channel    String
   templateKey String?
+  subject    String?
   body       String
+  status     String   @default("PENDING") // PENDING | SENT | FAILED (external channels)
+  attempts   Int      @default(0)
+  error      String?
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
   @@index([userId])
+  @@index([status])
 }
 
 model Conversation {
@@ -949,6 +957,7 @@ model Conversation {
   bookingId String?
   participantIds String[]
   messages  Message[]
+  reports   ConversationReport[]
   createdAt DateTime @default(now())
 }
 
@@ -960,6 +969,19 @@ model Message {
   body          String
   read          Boolean @default(false)
   createdAt     DateTime @default(now())
+  @@index([conversationId, createdAt])
+}
+
+model ConversationReport {
+  id             String   @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  reporterId     String
+  reason         String
+  status         String   @default("OPEN") // OPEN | REVIEWED | ACTIONED | DISMISSED
+  createdAt      DateTime @default(now())
+  @@index([conversationId])
+  @@index([status])
 }
 
 // ---------------------------------------------------------------------------
