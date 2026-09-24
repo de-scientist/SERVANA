@@ -25,6 +25,7 @@ import { ThrottlerGuard } from './common/guards/throttler.guard';
 import { LoggingModule } from './common/logging/logging.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { RankingModule } from './modules/ranking/ranking.module';
+import { ShopModule } from './modules/shop/shop.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { RankingModule } from './modules/ranking/ranking.module';
     StorageModule,
     ReviewsModule,
     RankingModule,
+    ShopModule,
     LoggingModule,
   ],
   providers: [

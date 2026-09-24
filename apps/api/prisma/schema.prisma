@@ -265,6 +265,7 @@ model Service {
   deliveryTypes ServiceDeliveryType[]
   options      ServiceOption[]
   providerServices ProviderService[]
+  crossSellLinks ServiceProductLink[]
 }
 
 enum ServiceDeliveryType {
@@ -591,10 +592,12 @@ model Product {
   currency   String   @default("KES")
   status     ProductStatus @default(ACTIVE)
   providerId String?
+  images     Json? // array of { key, url }
   variants   ProductVariant[]
   inventory  Inventory[]
   cartItems  CartItem[]
   orderItems OrderItem[]
+  linkedServices ServiceProductLink[]
 }
 
 enum ProductStatus {
@@ -609,6 +612,22 @@ model ProductVariant {
   product         Product @relation(fields: [productId], references: [id])
   attrs           Json
   priceDeltaCents BigInt   @default(0)
+}
+
+// Curated deterministic cross-sell: catalog service → relevant product
+// (e.g. Hair braiding → aftercare oil). Surfaced before category fallback.
+model ServiceProductLink {
+  id        String   @id @default(uuid())
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  reason    String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([serviceId, productId])
+  @@index([serviceId, sortOrder])
 }
 
 model Inventory {
@@ -641,7 +660,7 @@ model CartItem {
 model Order {
   id             String       @id @default(uuid())
   customerId     String
-  status         OrderStatus  @default(CREATED)
+  status         OrderStatus  @default(PENDING)
   subtotalCents  BigInt
   discountCents  BigInt       @default(0)
   totalCents     BigInt
@@ -652,9 +671,10 @@ model Order {
 }
 
 enum OrderStatus {
-  CREATED
+  PENDING
   PAID
-  FULFILLMENT
+  PROCESSING
+  READY
   SHIPPED
   DELIVERED
   COMPLETED

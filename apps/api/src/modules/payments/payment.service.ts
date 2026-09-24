@@ -13,7 +13,7 @@ import { BookingStatus } from '@prisma/client';
 
 export interface PaymentActor {
   sub: string;
-  role: 'CUSTOMER' | 'PROVIDER' | 'ADMIN' | 'SUPPORT';
+  role: 'CUSTOMER' | 'PROVIDER' | 'ADMIN' | 'SUPPORT' | 'SUPER_ADMIN';
 }
 
 export interface InitiatePaymentInput {
@@ -102,6 +102,66 @@ export class PaymentService {
     return this.mapPayment(payment.id);
   }
 
+  // --- initiate (orders) ------------------------------------------------------
+
+  async initiateForOrder(
+    actor: PaymentActor,
+    orderId: string,
+    method: PaymentMethod = 'OTHER',
+  ) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { product: { select: { providerId: true } } } } },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.customerId !== actor.sub && actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN' && actor.role !== 'SUPPORT') {
+      throw new ForbiddenException('Not your order');
+    }
+    if (order.status !== 'PENDING') {
+      throw new BadRequestException(`Order in status ${order.status} cannot be paid`);
+    }
+
+    const existing = await this.prisma.payment.findUnique({ where: { orderId: order.id } });
+    if (existing) {
+      if (existing.status === 'SUCCESSFUL' || existing.status === 'REFUNDED') {
+        throw new BadRequestException('Order already paid');
+      }
+      return this.mapPayment(existing.id);
+    }
+
+    const provider = this.gateway.get(method);
+    const idempotencyKey = `pay_order_${order.id}`;
+    const init = await provider.initiate({
+      idempotencyKey,
+      amountCents: order.totalCents,
+      currency: order.currency,
+      reference: `ORD_${order.id.slice(0, 8).toUpperCase()}`,
+      method,
+    });
+
+    const sellerId = order.items.map((i) => i.product?.providerId).find(Boolean) ?? null;
+    const payment = await this.prisma.payment.create({
+      data: {
+        orderId: order.id,
+        customerId: order.customerId,
+        providerId: sellerId,
+        amountCents: order.totalCents,
+        currency: order.currency,
+        status: 'PENDING',
+        provider: provider.id,
+        method,
+        providerRef: init.providerRef,
+        idempotencyKey,
+        grossCents: order.totalCents,
+        commissionCents: 0n,
+        netCents: order.totalCents,
+        expiresAt: new Date(Date.now() + PAYOUT_EXPIRY_MINUTES * 60_000),
+      },
+    });
+
+    return this.mapPayment(payment.id);
+  }
+
   // --- provider webhook / callback ------------------------------------------
 
   async handleProviderEvent(providerId: string, event: PaymentWebhookEvent) {
@@ -123,25 +183,42 @@ export class PaymentService {
 
         if (event.status === 'FAILED') {
           await tx.payment.update({ where: { id: payment.id }, data: { status: 'FAILED', webhookRaw: event as any } });
-          await tx.booking.update({ where: { id: payment.bookingId! }, data: { paymentStatus: 'FAILED' } });
-          await this.setBookingStatus(payment.bookingId!, 'PENDING', null, 'SYSTEM', 'Payment failed');
+          if (payment.bookingId) {
+            await tx.booking.update({ where: { id: payment.bookingId! }, data: { paymentStatus: 'FAILED' } });
+            await this.setBookingStatus(payment.bookingId!, 'PENDING', null, 'SYSTEM', 'Payment failed');
+          }
+          // Order payments stay PENDING on the order: the customer may retry.
           return { ok: true, failed: true };
         }
 
         // SUCCESSFUL
         if (payment.expiresAt && new Date() > payment.expiresAt) {
           await tx.payment.update({ where: { id: payment.id }, data: { status: 'CANCELLED', webhookRaw: event as any } });
-          await this.setBookingStatus(payment.bookingId!, 'EXPIRED', null, 'SYSTEM', 'Payment expired');
+          if (payment.bookingId) {
+            await this.setBookingStatus(payment.bookingId!, 'EXPIRED', null, 'SYSTEM', 'Payment expired');
+            return { ok: true, expired: true };
+          }
+          if (payment.orderId) {
+            await this.expireOrderHold(tx, payment.orderId);
+            return { ok: true, expired: true };
+          }
           return { ok: true, expired: true };
         }
 
         // Never trust the provider amount — compare to our server-side gross.
         if (event.amount !== payment.grossCents.toString() || event.currency !== payment.currency) {
           await tx.payment.update({ where: { id: payment.id }, data: { status: 'FAILED', webhookRaw: event as any } });
-          await tx.booking.update({ where: { id: payment.bookingId! }, data: { paymentStatus: 'FAILED' } });
-          await this.setBookingStatus(payment.bookingId!, 'PENDING', null, 'SYSTEM', 'Payment amount mismatch');
+          if (payment.bookingId) {
+            await tx.booking.update({ where: { id: payment.bookingId! }, data: { paymentStatus: 'FAILED' } });
+            await this.setBookingStatus(payment.bookingId!, 'PENDING', null, 'SYSTEM', 'Payment amount mismatch');
+          }
           return { ok: true, amountMismatch: true };
         }
+
+        if (payment.orderId) {
+          return this.captureOrderPayment(tx, payment, event);
+        }
+        if (!payment.bookingId) return { ok: true, ignored: true };
 
         const booking = await tx.booking.findUnique({
           where: { id: payment.bookingId! },
