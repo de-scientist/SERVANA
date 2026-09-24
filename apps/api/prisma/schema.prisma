@@ -1040,3 +1040,36 @@ model AuditLog {
   createdAt DateTime @default(now())
   @@index([entity, entityId])
 }
+
+// ---------------------------------------------------------------------------
+// AI foundation (provider-agnostic, guardrailed)
+// ---------------------------------------------------------------------------
+
+model AiRequestLog {
+  id          String   @id @default(uuid())
+  actorId     String?
+  feature     String // e.g. recommendation, review-insights, marketing-copy
+  provider    String
+  model       String
+  inputTokens Int      @default(0)
+  outputTokens Int     @default(0)
+  costCents   BigInt   @default(0)
+  status      String   @default("OK") // OK | BLOCKED | FAILED
+  error       String?
+  createdAt   DateTime @default(now())
+  @@index([feature, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model AiActionProposal {
+  id          String   @id @default(uuid())
+  proposedBy  String?
+  kind        String // e.g. PAYOUT_INITIATE, REFUND_ISSUE, USER_SUSPEND, ...
+  payload     Json
+  reason      String?
+  status      String   @default("PROPOSED") // PROPOSED | APPROVED | REJECTED | EXECUTED | REFUSED
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+  @@index([status, createdAt])
+}
