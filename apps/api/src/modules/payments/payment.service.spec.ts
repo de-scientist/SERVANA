@@ -605,7 +605,7 @@ describe('PaymentService', () => {
     });
   });
 
-  describe('refund', () => {
+  describe('refund (admin-only; customers cannot self-refund)', () => {
     it('refunds a successful payment', async () => {
       const prisma = makePrisma();
       const gateway = makeGateway();
@@ -642,9 +642,20 @@ describe('PaymentService', () => {
       });
       const svc = service(prisma, gateway);
 
-      const result = await svc.refund({ sub: 'cust1', role: 'CUSTOMER' }, 'pay1', 'Changed mind');
+      const result = await svc.refund({ sub: 'admin1', role: 'ADMIN' }, 'pay1', 'Dispute upheld');
 
       expect(result.status).toBe('REFUNDED');
+    });
+
+    it('rejects customer self-refund even for own successful payment', async () => {
+      const prisma = makePrisma();
+      prisma.payment.findUnique.mockResolvedValue({
+        id: 'pay1', customerId: 'cust1', status: 'SUCCESSFUL',
+        grossCents: 200000n, booking: { id: 'b1', status: 'PAID' },
+      });
+      const svc = service(prisma);
+
+      await expect(svc.refund({ sub: 'cust1', role: 'CUSTOMER' }, 'pay1', 'Changed mind')).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('throws if payment not found', async () => {
@@ -652,10 +663,10 @@ describe('PaymentService', () => {
       prisma.payment.findUnique.mockResolvedValue(null);
       const svc = service(prisma);
 
-      await expect(svc.refund({ sub: 'cust1', role: 'CUSTOMER' }, 'pay1')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(svc.refund({ sub: 'admin1', role: 'ADMIN' }, 'pay1')).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('throws if not the payment owner', async () => {
+    it('rejects SUPPORT refunds (read-only role)', async () => {
       const prisma = makePrisma();
       prisma.payment.findUnique.mockResolvedValue({
         id: 'pay1', customerId: 'other', status: 'SUCCESSFUL',
@@ -663,7 +674,7 @@ describe('PaymentService', () => {
       });
       const svc = service(prisma);
 
-      await expect(svc.refund({ sub: 'cust1', role: 'CUSTOMER' }, 'pay1')).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(svc.refund({ sub: 'sup1', role: 'SUPPORT' }, 'pay1')).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('throws if payment not successful', async () => {
@@ -674,7 +685,7 @@ describe('PaymentService', () => {
       });
       const svc = service(prisma);
 
-      await expect(svc.refund({ sub: 'cust1', role: 'CUSTOMER' }, 'pay1')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(svc.refund({ sub: 'admin1', role: 'ADMIN' }, 'pay1')).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('allows admin to refund any payment', async () => {

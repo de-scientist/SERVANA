@@ -170,10 +170,15 @@ describe('security negatives (Phase 17)', () => {
 
     it('rejects unsigned/forged callbacks when a secret is configured', async () => {
       process.env.MPESA_WEBHOOK_SECRET = 's3cret';
+      const { createHmac } = await import('crypto');
+      const valid = createHmac('sha256', 's3cret').update('{}', 'utf8').digest('hex');
       const p = new TestProvider();
       await expect(p.verifyWebhook('{}', undefined)).resolves.toBe(false);
       await expect(p.verifyWebhook('{}', 'forged')).resolves.toBe(false);
-      await expect(p.verifyWebhook('{}', 's3cret')).resolves.toBe(true);
+      // Plain-text secret equality is NOT accepted — only HMAC-SHA256 hex.
+      await expect(p.verifyWebhook('{}', 's3cret')).resolves.toBe(false);
+      await expect(p.verifyWebhook('{}', valid)).resolves.toBe(true);
+      await expect(p.verifyWebhook('{}', `sha256=${valid}`)).resolves.toBe(true);
     });
   });
 
