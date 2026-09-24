@@ -42,7 +42,8 @@ export interface PublicProviderProfile {
   travelToCustomer: boolean;
   serviceRadiusKm: number | null;
   websiteUrl: string | null;
-  businessPhone: string | null;
+  // NOTE: exact coordinates, street address and business phone are private
+  // (shared in-booking via messaging) and never appear on public profiles.
   yearsExperience: number | null;
   languages: string[];
   categories: { id: string; name: string; slug: string }[];

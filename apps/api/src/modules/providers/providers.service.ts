@@ -909,13 +909,11 @@ export class ProvidersService {
       bio: p.bio,
       city: p.city,
       country: p.country,
-      location: p.address,
-      lat: p.lat,
-      lng: p.lng,
+      // Privacy: exact coordinates, street address and business phone stay
+      // private (shared in-booking via messaging). City-level only here.
       travelToCustomer: p.travelToCustomer,
       serviceRadiusKm: p.serviceRadiusKm,
       websiteUrl: p.websiteUrl,
-      businessPhone: p.businessPhone,
       yearsExperience: p.yearsExperience,
       languages: p.languages,
       socialLinks: p.socialLinks,
