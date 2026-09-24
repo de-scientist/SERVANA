@@ -99,6 +99,16 @@ export class ShopController {
   }
 
   @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
+  @Post('orders/:id/pay')
+  async payOrder(
+    @CurrentUser() user: Actor,
+    @Param('id') id: string,
+    @Body() body: { method?: 'MPESA' | 'CARD' | 'BANK' | 'OTHER' },
+  ) {
+    return { data: await this.orders.pay({ sub: user.sub, role: user.role }, id, body?.method as any) };
+  }
+
+  @Auth('CUSTOMER', 'PROVIDER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT')
   @Post('orders/:id/cancel')
   async cancelMine(
     @CurrentUser() user: Actor,

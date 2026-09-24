@@ -176,6 +176,11 @@ export class OrderService {
 
   // --- reads --------------------------------------------------------------------
 
+  /** Retry payment for a still-PENDING order (fresh provider reference). */
+  async pay(actor: OrderActor, id: string, method?: 'MPESA' | 'CARD' | 'BANK' | 'OTHER') {
+    return this.payments.retryOrderPayment({ sub: actor.sub, role: actor.role as any }, id, method as any);
+  }
+
   async listMine(actor: OrderActor, query: ListOrdersInput) {
     return this.list({ customerId: actor.sub }, query);
   }
@@ -210,8 +215,7 @@ export class OrderService {
     };
   }
 
-  async getMine(actor: OrderActor, id: string) {
-    const order = await this.prisma.order.findUnique({ where: { id }, include: this.orderInclude() });
+  async getMine(actor: OrderActor, id: string) {    const order = await this.prisma.order.findUnique({ where: { id }, include: this.orderInclude() });
     if (!order) throw new NotFoundException('Order not found');
     if (order.customerId !== actor.sub && !ADMIN_ROLES.includes(actor.role)) {
       throw new ForbiddenException('Not your order');
