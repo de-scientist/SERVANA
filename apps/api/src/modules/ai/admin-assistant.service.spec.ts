@@ -36,9 +36,6 @@ function svc(prisma?: any) {
   return { service: new AdminAssistantService(prisma ?? makePrisma(), audit, ai), audit };
 }
 
-const day = 86_400_000;
-const ago = (days: number) => new Date(Date.now() - days * day);
-
 describe('AdminAssistantService (controlled analytics)', () => {
   it('explains booking declines with current-vs-previous counts', async () => {
     const prisma = makePrisma();

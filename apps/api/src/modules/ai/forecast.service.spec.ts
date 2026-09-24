@@ -80,7 +80,7 @@ describe('ForecastService (explicitly experimental)', () => {
         { customerId: 'quiet', status: 'COMPLETED', startsAt: ago(120) },
         { customerId: 'active', status: 'COMPLETED', startsAt: ago(2) },
       ]);
-      prisma.booking.findMany.mockImplementation(async ({ where, select }: any) => {
+      prisma.booking.findMany.mockImplementation(async ({ where }: any) => {
         const all = [
           { customerId: 'quiet', status: 'COMPLETED', startsAt: ago(100) },
           { customerId: 'quiet', status: 'COMPLETED', startsAt: ago(120) },
