@@ -355,8 +355,12 @@ describe('security negatives (Phase 17)', () => {
     it('ignores client-supplied points: awards come from server rules only', async () => {
       const db: any = {
         loyaltyRule: {
-          findMany: jest.fn().mockResolvedValue([{ event: 'BOOKING' }]),
+          findMany: jest.fn().mockResolvedValue([
+            { event: 'BOOKING' }, { event: 'REVIEW' }, { event: 'REFERRAL' },
+            { event: 'PURCHASE' }, { event: 'SIGNUP' },
+          ]),
           findUnique: jest.fn().mockResolvedValue({ event: 'BOOKING', points: 20, active: true }),
+          create: jest.fn(),
         },
         loyaltyTier: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn(), update: jest.fn() },
         customerProfile: { upsert: jest.fn().mockResolvedValue({ id: 'prof1' }) },
@@ -390,6 +394,7 @@ describe('security negatives (Phase 17)', () => {
     it('excludes verification documents, owner contacts and precise location', async () => {
       const profile = {
         id: 'p1', businessName: 'B', slug: 'b', tagline: null, bio: null, city: 'Nairobi', country: 'Kenya',
+        status: 'VERIFIED',
         address: { street: 'Secret St 1' }, lat: -1.292, lng: 36.821, travelToCustomer: false,
         serviceRadiusKm: null, websiteUrl: null, businessPhone: '+254700000000', yearsExperience: null,
         languages: [], socialLinks: null, workingPreferences: null,
