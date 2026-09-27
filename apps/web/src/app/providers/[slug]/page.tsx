@@ -1,0 +1,222 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { fetchProvider, fetchProviderReviews, formatPrice } from '@/lib/server-api';
+
+interface PageProps {
+  params: { slug: string };
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const p = await fetchProvider(params.slug);
+  if (!p) return { title: 'Provider not found | SERVANA' };
+  const title = `${p.businessName} | SERVANA`;
+  const description = p.tagline ?? p.bio ?? `Book ${p.businessName} on SERVANA.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/providers/${p.slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/providers/${p.slug}`,
+      type: 'profile',
+    },
+  };
+}
+
+export default async function ProviderPage({ params }: PageProps) {
+  const p = await fetchProvider(params.slug);
+  if (!p) notFound();
+  const reviews = await fetchProviderReviews(p.id);
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: p.businessName,
+    description: p.bio ?? p.tagline,
+    areaServed: p.city,
+    url: `${process.env.NEXT_PUBLIC_WEB_URL ?? 'https://servana.app'}/providers/${p.slug}`,
+    ...(p.verification.verified ? { award: 'SERVANA Verified Provider' } : {}),
+    makesOffer: p.services.map((s) => ({
+      '@type': 'Offer',
+      name: s.name,
+      price: s.price,
+      priceCurrency: s.currency,
+    })),
+  };
+
+  return (
+    <main className="container py-10">
+      {/* SECURITY: escape `<`/`>`/`&` so provider-controlled text cannot break
+          out of the JSON-LD script block (`</script>` injection). */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026') }} />
+
+      <Link href="/providers" className="text-sm text-primary hover:underline">
+        ← All providers
+      </Link>
+
+      <header className="mt-4 flex flex-col gap-3 border-b pb-6 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{p.businessName}</h1>
+            {p.verification.verified && (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                Verified {p.verification.level?.replace('_', ' ').toLowerCase()}
+              </span>
+            )}
+          </div>
+          {p.tagline && <p className="mt-1 text-muted-foreground">{p.tagline}</p>}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {p.categories.map((c) => (
+              <span key={c.id} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                {c.name}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {[p.city, p.country].filter(Boolean).join(', ')}
+            {p.travelToCustomer ? ' · Travels to you' : ''}
+          </p>
+        </div>
+
+        <div id="book" className="shrink-0">
+          <Link
+            href="#book"
+            className="inline-flex h-11 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            Book this provider
+          </Link>
+          <p className="mt-2 text-center text-xs text-muted-foreground">Online booking opens soon</p>
+        </div>
+      </header>
+
+      {p.bio && <p className="mt-6 max-w-3xl leading-relaxed text-foreground/90">{p.bio}</p>}
+
+      <section aria-label="Trust signals" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.reviews.overall > 0 ? `${p.reviews.overall.toFixed(1)} ★` : 'New'}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{p.reviews.total} verified review{p.reviews.total === 1 ? '' : 's'}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.reviews.customersServed.toLocaleString()}</p>
+          <p className="mt-1 text-xs text-muted-foreground">customers served</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.reviews.completionRate}%</p>
+          <p className="mt-1 text-xs text-muted-foreground">completion rate</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.reviews.responseRate}%</p>
+          <p className="mt-1 text-xs text-muted-foreground">response rate</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-bold">{p.verification.verified ? 'Verified' : 'Unverified'}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{p.verification.level?.replace(/_/g, ' ').toLowerCase() ?? 'identity not yet verified'}</p>
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-xl font-semibold">Services</h2>
+        {p.services.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">No services listed yet.</p>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            {p.services.map((s) => (
+              <div key={s.id} className="rounded-lg border bg-card p-4 shadow-soft">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-medium">{s.name}</h3>
+                  <span className="font-semibold">{formatPrice(s.price, s.currency)}</span>
+                </div>
+                {s.description && <p className="mt-1 text-sm text-muted-foreground">{s.description}</p>}
+                <div className="mt-2 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
+                  <span className="rounded bg-muted px-2 py-0.5">{s.durationMin} min</span>
+                  {s.deliveryTypes.map((d) => (
+                    <span key={d} className="rounded bg-muted px-2 py-0.5">
+                      {d.replace(/_/g, ' ').toLowerCase()}
+                    </span>
+                  ))}
+                  {s.travelFee != null && <span className="rounded bg-muted px-2 py-0.5">travel {formatPrice(s.travelFee, s.currency)}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {p.portfolio.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-xl font-semibold">Portfolio</h2>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {p.portfolio.map((item) => (
+              <div key={item.id} className="rounded-lg border bg-card p-4 shadow-soft">
+                <h3 className="font-medium">{item.title}</h3>
+                {item.description && <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>}
+                {(item.images?.length ?? 0) > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {item.images!.map((img) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={img.key} src={img.url} alt={item.title} className="h-20 w-20 rounded object-cover" />
+                    ))}
+                  </div>
+                )}
+                {item.link && (
+                  <a href={item.link} className="mt-2 inline-block text-xs text-primary hover:underline" target="_blank" rel="noreferrer">
+                    View more
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="mt-10">
+        <h2 className="text-xl font-semibold">Reviews</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Only customers with completed, verified appointments can leave a review.
+        </p>
+        {reviews.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No verified reviews yet.</p>
+        ) : (
+          <ul className="mt-4 space-y-4">
+            {reviews.map((r) => (
+              <li key={r.id} className="rounded-lg border bg-card p-4 shadow-soft">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold">{r.overall.toFixed(1)} ★</p>
+                  <p className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</p>
+                </div>
+                {r.title && <p className="mt-1 font-medium">{r.title}</p>}
+                {r.body && <p className="mt-1 text-sm text-foreground/90">{r.body}</p>}
+                {r.dimensions.length > 0 && (
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground sm:grid-cols-5">
+                    {r.dimensions.map((d) => (
+                      <div key={d.id} className="flex justify-between gap-2">
+                        <dt>{d.name}</dt>
+                        <dd className="font-medium text-foreground">{d.score}/5</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                {r.response && (
+                  <div className="mt-3 rounded-md bg-muted/50 p-3 text-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Provider response</p>
+                    <p className="mt-1">{r.response.body}</p>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-10 rounded-lg border bg-muted/30 p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Availability</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Live availability will appear here once the booking engine launches.
+        </p>
+        <div id="availability" className="mt-2" />
+      </section>
+    </main>
+  );
+}

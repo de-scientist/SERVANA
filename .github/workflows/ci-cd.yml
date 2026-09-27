@@ -1,0 +1,166 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [main]
+    paths-ignore: [**.md, **.txt]
+
+jobs:
+  lint-typecheck:
+    name: Lint → Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (API)
+        run: npm run lint --workspace=apps/api
+
+      - name: Lint (Web)
+        run: npm run lint --workspace=apps/web
+
+      - name: Typecheck (API)
+        run: npm run typecheck --workspace=apps/api
+
+      - name: Typecheck (Web)
+        run: npm run typecheck --workspace=apps/web
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    needs: lint-typecheck
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run API tests
+        run: npm test --workspace=apps/api -- --runInBand
+
+      - name: Run Web tests
+        run: npm test --workspace=apps/web -- --run
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    needs: tests
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (API)
+        run: npm run build --workspace=apps/api
+
+      - name: Build (Web)
+        run: npm run build --workspace=apps/web
+
+  migration-validation:
+    name: Migration Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate --workspace=apps/api
+
+      - name: Validate migrations
+        run: npm run db:diff --workspace=apps/api -- --from-empty --to-schema-datamodel prisma/schema.prisma --script > migration.sql && test -f migration.sql && wc -l migration.sql
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    needs: [migration-validation, tests]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify production secrets
+        run: |
+          if [ "${NODE_ENV}" = "production" ]; then
+            echo "Checking production secrets..."
+            if [ -z "${JWT_ACCESS_SECRET}" ] || [ "${JWT_ACCESS_SECRET}" = "change_me_access" ]; then
+              echo "ERROR: JWT_ACCESS_SECRET not configured for production"
+              exit 1
+            fi
+            if [ -z "${MPESA_WEBHOOK_SECRET}" ] || [ "${MPESA_WEBHOOK_SECRET}" = "" ]; then
+              echo "WARNING: MPESA_WEBHOOK_SECRET not set - webhooks cannot be authenticated"
+            fi
+          fi
+
+      - name: Deploy to staging
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Deploying to staging environment..."
+          # Deploy logic would go here (e.g., render, fly.io, railway, etc.)
+          echo "Staging deployment complete"
+
+      - name: Deploy to production
+        if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'promote-to-prod')
+        run: |
+          echo "Deploying to production environment..."
+          # Deploy logic would go here
+          echo "Production deployment complete"

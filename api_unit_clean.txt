@@ -1,0 +1,15 @@
+
+> api@0.1.0 test
+> jest --runInBand
+
+PASS src/modules/rbac/guards/roles.guard.spec.ts (27.286 s)
+PASS src/common/money/money.spec.ts
+PASS src/modules/users/users.service.spec.ts (5.086 s)
+PASS src/modules/rbac/rbac.service.spec.ts
+PASS src/modules/auth/auth.service.spec.ts (9.597 s)
+
+Test Suites: 5 passed, 5 total
+Tests:       29 passed, 29 total
+Snapshots:   0 total
+Time:        44.247 s
+Ran all test suites.
