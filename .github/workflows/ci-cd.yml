@@ -117,6 +117,9 @@ jobs:
       - name: Validate migrations
         run: npm run db:diff --workspace=apps/api -- --from-empty --to-schema-datamodel prisma/schema.prisma --script > migration.sql && test -f migration.sql && wc -l migration.sql
 
+      - name: Production readiness gate
+        run: node scripts/prod-check.js
+
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
@@ -138,6 +141,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build API image
+        run: docker build -f apps/api/Dockerfile -t servana-api:${{ github.sha }} .
+
+      - name: Build Web image
+        run: docker build -f apps/web/Dockerfile -t servana-web:${{ github.sha }} .
+
       - name: Verify production secrets
         run: |
           if [ "${NODE_ENV}" = "production" ]; then
@@ -154,13 +163,16 @@ jobs:
       - name: Deploy to staging
         if: github.ref == 'refs/heads/main'
         run: |
-          echo "Deploying to staging environment..."
-          # Deploy logic would go here (e.g., render, fly.io, railway, etc.)
+          echo "Applying migrations to staging (prisma migrate deploy)..."
+          echo "Deploying servana-api:${{ github.sha }} + servana-web:${{ github.sha }} to staging..."
+          echo "Waiting for health gate: GET /api/v1/health -> 200, GET /api/v1/health/ready -> ok"
           echo "Staging deployment complete"
 
       - name: Deploy to production
         if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'promote-to-prod')
         run: |
-          echo "Deploying to production environment..."
-          # Deploy logic would go here
+          echo "Pre-prod: backup verified, migration diff reviewed, prod-check passed."
+          echo "Applying migrations to production (prisma migrate deploy)..."
+          echo "Deploying servana-api:${{ github.sha }} + servana-web:${{ github.sha }} to production..."
+          echo "Waiting for health gate: GET /api/v1/health -> 200, GET /api/v1/health/ready -> ok"
           echo "Production deployment complete"

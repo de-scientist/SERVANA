@@ -22,24 +22,46 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
     return this.order[level] >= this.order[this.minLevel];
   }
 
+  private emit(level: LogLevel, message: unknown, context?: string, stack?: string): void {
+    // Production: single-line JSON for log collectors (Datadog/Logtail/etc).
+    // Never attach secrets/PII here — callers must redact before logging.
+    if (process.env.NODE_ENV === 'production') {
+      const line = JSON.stringify({
+        level,
+        time: new Date().toISOString(),
+        context: context ?? this.context,
+        msg: typeof message === 'string' ? message : this.fmt(message),
+        ...(stack ? { stack } : {}),
+      });
+      // eslint-disable-next-line no-console
+      console.log(line);
+      return;
+    }
+    if (level === 'warn') super.warn(this.fmt(message), context);
+    else if (level === 'error' || level === 'fatal') super.error(this.fmt(message), stack, context);
+    else if (level === 'debug') super.debug(this.fmt(message), context);
+    else if (level === 'verbose') super.verbose(this.fmt(message), context);
+    else super.log(this.fmt(message), context);
+  }
+
   log(message: unknown, context?: string): void {
-    if (this.enabled('log')) super.log(this.fmt(message), context);
+    if (this.enabled('log')) this.emit('log', message, context);
   }
 
   warn(message: unknown, context?: string): void {
-    if (this.enabled('warn')) super.warn(this.fmt(message), context);
+    if (this.enabled('warn')) this.emit('warn', message, context);
   }
 
   error(message: unknown, stack?: string, context?: string): void {
-    if (this.enabled('error')) super.error(this.fmt(message), stack, context);
+    if (this.enabled('error')) this.emit('error', message, context, stack);
   }
 
   debug(message: unknown, context?: string): void {
-    if (this.enabled('debug')) super.debug(this.fmt(message), context);
+    if (this.enabled('debug')) this.emit('debug', message, context);
   }
 
   verbose(message: unknown, context?: string): void {
-    if (this.enabled('verbose')) super.verbose(this.fmt(message), context);
+    if (this.enabled('verbose')) this.emit('verbose', message, context);
   }
 
   private fmt(message: unknown): string {

@@ -1,10 +1,20 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { AppProviders } from '@/components/providers/app-providers';
 import '../styles/globals.css';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#111827',
+};
+
 export const metadata: Metadata = {
-  title: 'SERVANA — Beauty & Personal Care Marketplace',
+  metadataBase: new URL(process.env.WEB_BASE_URL ?? 'https://servana.example.com'),
+  title: {
+    default: 'SERVANA — Beauty & Personal Care Marketplace',
+    template: '%s | SERVANA',
+  },
   description:
     'Discover, book and pay verified beauty & personal-care providers. Shop products, earn rewards.',
   openGraph: {
@@ -18,6 +28,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2"
+        >
+          Skip to main content
+        </a>
         <header className="border-b bg-background">
           <nav className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 text-sm">
             <Link href="/" className="font-bold text-primary">
@@ -58,7 +74,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
           </nav>
         </header>
-        <AppProviders>{children}</AppProviders>
+        <main id="main-content">
+          <AppProviders>{children}</AppProviders>
+        </main>
       </body>
     </html>
   );

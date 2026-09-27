@@ -14,7 +14,8 @@
     "dev:api": "npm run dev --workspace apps/api",
     "dev:web": "npm run dev --workspace apps/web",
     "db:generate": "npm run db:generate --workspace apps/api",
-    "db:migrate": "npm run db:migrate --workspace apps/api"
+    "db:migrate": "npm run db:migrate --workspace apps/api",
+    "prod:check": "node scripts/prod-check.js"
   },
   "devDependencies": {
     "prettier": "^3.3.3"

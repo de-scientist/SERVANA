@@ -266,7 +266,7 @@ fi
 
 ### Log Structure
 
-All structured logs are JSON via pino with these fields:
+Production emits single-line JSON via `AppLoggerService` (dev stays human-readable):
 - `level` — `info`, `warn`, `error`, `fatal`
 - `time` — ISO timestamp UTC
 - `msg` — human-readable message
@@ -280,6 +280,7 @@ All structured logs are JSON via pino with these fields:
 - **Container stdout/stderr** — captured by container orchestration
 - **Sentry** — error tracking with stack traces
 - **Application logs** — `NestLogger` → configured collector
+- **Metrics** — scrape `GET /api/v1/health/metrics` (Prometheus format); restrict to scraper network
 
 ### Redaction Rules (per `SECURITY.md`)
 

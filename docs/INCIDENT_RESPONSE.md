@@ -34,7 +34,7 @@
 
 ### Step 1: Triage (0–5 minutes)
 
-1. **Confirm the incident** — check health endpoint, monitoring dashboards
+1. **Confirm the incident** — check health endpoint (`/api/v1/health`, `/api/v1/health/ready`, `/api/v1/health/metrics`), monitoring dashboards
 2. **Identify scope** — is this frontend, backend, database, Redis, or external service?
 3. **Determine severity** — P0/P1/P2/P3 per classification above
 4. **Declare the incident** — post to `#alerts` Slack with:

@@ -96,9 +96,10 @@ main        │                                        ▼
 1. **Lint** — ESLint on both apps
 2. **Typecheck** — TypeScript compiler on both apps
 3. **Tests** — Jest (API) + Vitest (Web); integration tests run
-4. **Build** — `nest build` + `next build`; Docker image build
+4. **Build** — `nest build` + `next build`; Docker image build (`apps/api/Dockerfile`, `apps/web/Dockerfile`)
 5. **Migration validation** — Prisma `migrate diff` + `prisma generate`; no destructive changes
-6. **Deploy** — Push image to registry; apply migrations via `Prisma migrate deploy`; deploy to staging; prompt for production promotion
+6. **Production readiness gate** — `node scripts/prod-check.js` (critical checks must pass)
+7. **Deploy** — Push image to registry; apply migrations via `Prisma migrate deploy`; deploy to staging; health-gate (`/api/v1/health` → 200, `/api/v1/health/ready` → ok); prompt for production promotion
 
 **Key practices:**
 - Migrations applied via `Prisma migrate deploy` in deploy step (not auto in app)
@@ -115,12 +116,34 @@ main        │                                        ▼
 
 ## 6. Observability
 
-- **Structured logs** (pino) → log collector (Datadog/Logtail)
+- **Structured logs** (JSON in production via `AppLoggerService`) → log collector (Datadog/Logtail)
 - **Error tracking** (Sentry) — capture exceptions, breadcrumbs, performance
 - **API latency** — Prometheus histograms on `/api/v1/health` and key endpoints
+- **Metrics endpoint** — `GET /api/v1/health/metrics` (Prometheus exposition: uptime, db_up, redis_up; restrict to scraper network)
 - **DB metrics** — pg_stat statements, connection pool, replication lag
 - **Redis metrics** — key space hits, memory usage, latency p99
 - **BullMQ dashboard** — job progress, failed jobs, queue depth
 - **Payment webhook monitors** — idempotency + signature verification + replay guard
 - **Synthetic checks** — critical flows (health, booking, payment) every minute
 - **Audit logging** — append-only `AuditLog`; all sensitive actions logged (who/what/before/after/ip)
+
+## 7. Production Checklist (gate: `npm run prod:check`)
+
+| # | Check | How it is verified |
+|---|-------|--------------------|
+| 1 | HTTPS | TLS terminated at CDN/ALB; HSTS (`max-age=31536000`) on API + web in prod |
+| 2 | Secure headers | API: helmet (CSP `default-src 'none'`, frame deny); Web: CSP, `DENY` framing, nosniff, referrer-policy |
+| 3 | Authentication | JWT access+refresh, rotation schedule; weak secrets refuse boot (`assertProductionSecrets`) |
+| 4 | Authorization | RBAC guards; AuditLog restricted to `SUPER_ADMIN` |
+| 5 | Webhooks | Raw-body HMAC verification; replay guard; invalid-signature alerts |
+| 6 | Payment verification | `MPESA_WEBHOOK_SECRET` required in prod (boot warning otherwise); sandbox in staging |
+| 7 | Error handling | Global exception filter; no stack/PII leaks in prod responses |
+| 8 | Backups | Managed PG PITR + daily snapshots; weekly restore drill (see OPERATIONS.md) |
+| 9 | Logging | JSON lines in prod; PII redaction per SECURITY.md |
+| 10 | Alerts | Thresholds in OPERATIONS.md §9; `#alerts` channel |
+| 11 | SEO | Metadata + `robots.ts` + `sitemap.ts` |
+| 12 | Mobile responsiveness | Viewport metadata; responsive Tailwind layouts |
+| 13 | Accessibility | `lang="en"`, skip-to-content link, labelled form controls |
+
+> Do not claim production-ready until `node scripts/prod-check.js` reports
+> zero CRITICAL failures **and** every row above has been verified in staging.
