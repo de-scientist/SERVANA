@@ -2,40 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+/*
+ * SERVANA design tokens — Trust + Beauty + Technology + Convenience.
+ * Semantic HSL tokens consumed via Tailwind (see tailwind.config.ts).
+ * Light theme is default; `.dark` overrides semantic tokens (no naive invert).
+ */
 
-  /* Design tokens — premium, warm, beauty-aware */
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Core surfaces */
   --background: 30 33% 98%;
   --foreground: 240 10% 12%;
-
-  --primary: 330 65% 52%;
-  --primary-foreground: 0 0% 100%;
-
-  --secondary: 260 40% 55%;
-  --secondary-foreground: 0 0% 100%;
-
+  --surface: 0 0% 100%;
+  --surface-elevated: 0 0% 100%;
   --muted: 30 10% 94%;
   --muted-foreground: 240 5% 40%;
+  --border: 30 10% 88%;
+  --input: 30 10% 84%;
+  --ring: 330 65% 52%;
 
-  --accent: 28 90% 60%;
-  --accent-foreground: 0 0% 100%;
+  /* Brand — preserve existing SERVANA identity, modernised */
+  --primary: 330 65% 46%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 260 32% 48%;
+  --secondary-foreground: 0 0% 100%;
+  --accent: 28 90% 55%;
+  --accent-foreground: 24 100% 12%;
 
+  /* Feedback */
+  --success: 152 60% 32%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 48%;
+  --warning-foreground: 24 100% 12%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
+  --info: 210 85% 48%;
+  --info-foreground: 0 0% 100%;
 
   --card: 0 0% 100%;
   --card-foreground: 240 10% 12%;
 
-  --border: 30 10% 88%;
-  --input: 30 10% 88%;
-  --ring: 330 65% 52%;
-
+  /* Shape + elevation */
   --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(16, 12, 20, 0.05);
+  --shadow-md: 0 1px 2px rgba(16, 12, 20, 0.05), 0 8px 24px rgba(16, 12, 20, 0.07);
+  --shadow-lg: 0 2px 4px rgba(16, 12, 20, 0.06), 0 16px 40px rgba(16, 12, 20, 0.12);
+
+  /* Motion */
+  --motion-instant: 80ms;
+  --motion-fast: 150ms;
+  --motion-normal: 240ms;
+  --motion-slow: 400ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark {
+  --background: 250 12% 9%;
+  --foreground: 30 20% 94%;
+  --surface: 250 12% 12%;
+  --surface-elevated: 250 12% 15%;
+  --muted: 250 10% 17%;
+  --muted-foreground: 30 8% 68%;
+  --border: 250 10% 20%;
+  --input: 250 10% 26%;
+  --ring: 330 70% 62%;
+
+  --primary: 330 70% 60%;
+  --primary-foreground: 250 20% 10%;
+  --secondary: 260 45% 68%;
+  --secondary-foreground: 250 20% 10%;
+  --accent: 30 95% 62%;
+  --accent-foreground: 250 20% 10%;
+
+  --success: 152 55% 45%;
+  --warning: 38 95% 58%;
+  --destructive: 0 75% 62%;
+  --info: 210 90% 62%;
+
+  --card: 250 12% 12%;
+  --card-foreground: 30 20% 94%;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.45), 0 16px 40px rgba(0, 0, 0, 0.5);
 }
 
 * {
   border-color: hsl(var(--border));
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -43,4 +104,80 @@ body {
   color: hsl(var(--foreground));
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Visible, consistent focus for keyboard users */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Touch targets: minimum 44px for primary interactive controls on coarse pointers */
+@media (pointer: coarse) {
+  button,
+  a.inline-flex,
+  input[type='checkbox'],
+  input[type='radio'] {
+    min-height: 24px;
+  }
+}
+
+@layer components {
+  /* Type scale */
+  .type-display { @apply text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl; line-height: 1.05; letter-spacing: -0.02em; }
+  .type-h1 { @apply text-3xl font-bold tracking-tight sm:text-4xl; line-height: 1.12; letter-spacing: -0.015em; }
+  .type-h2 { @apply text-2xl font-semibold tracking-tight; line-height: 1.2; }
+  .type-h3 { @apply text-xl font-semibold; line-height: 1.3; }
+  .type-h4 { @apply text-lg font-semibold; line-height: 1.35; }
+  .type-body-lg { @apply text-base leading-relaxed; }
+  .type-body { @apply text-sm leading-relaxed; }
+  .type-body-sm { @apply text-[13px] leading-relaxed; }
+  .type-caption { @apply text-xs; }
+  .type-label { @apply text-sm font-medium; }
+
+  .container-narrow { @apply mx-auto w-full max-w-3xl px-4 sm:px-6; }
+  .card-rest { @apply rounded-lg border bg-card text-card-foreground; box-shadow: var(--shadow-sm); }
+  .card-elevated { @apply rounded-lg border bg-card text-card-foreground; box-shadow: var(--shadow-md); }
+
+  /* Skeleton shimmer (respects reduced motion via media query below) */
+  .skeleton {
+    @apply rounded-md bg-muted;
+    position: relative;
+    overflow: hidden;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    animation: skeleton-shimmer 1.6s infinite;
+  }
+  .dark .skeleton::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* Subtle, fast micro-interactions only */
+.transition-micro {
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .skeleton::after { animation: none; }
 }
