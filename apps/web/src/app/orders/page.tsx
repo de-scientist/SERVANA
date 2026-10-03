@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
-import { formatPrice } from '@/lib/api';
+import { formatMinorUnits } from '@/lib/format';
+import { Breadcrumb, Tabs } from '@/components/ui/tabs';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
+import { ListSkeleton } from '@/components/ui/skeleton';
 
 interface OrderItem {
   id: string;
@@ -26,53 +31,69 @@ export default function OrdersPage({ searchParams }: { searchParams: { highlight
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  async function load() {
+    setLoading(true);
+    setError(null);
+    const res = await apiClient.get<{ data: Order[] } | Order[]>('/orders');
+    if (res.error) setError(res.error.message);
+    else {
+      const raw = res.data as { data: Order[] } | Order[] | null;
+      setOrders(Array.isArray(raw) ? raw : (raw?.data ?? []));
+    }
+    setLoading(false);
+  }
+
   useEffect(() => {
-    apiClient.get<{ data: Order[] }>('/orders')
-      .then((res) => {
-        if (res.error) setError(res.error.message);
-        else setOrders(((res.data as unknown) as { data: Order[] }).data ?? (res.data as unknown as Order[]));
-      })
-      .finally(() => setLoading(false));
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) return <main className="container py-10"><p className="text-sm text-muted-foreground">Loading orders…</p></main>;
-
   return (
-    <main className="container py-10">
-      <h1 className="text-3xl font-bold tracking-tight">Your orders</h1>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+    <main className="mx-auto max-w-3xl px-4 py-8">
+      <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'My orders' }]} />
+      <h1 className="type-h1 mt-3">Your orders</h1>
       {searchParams.highlight && (
-        <p className="mt-2 rounded-md border border-green-300 bg-green-50 p-3 text-sm">
-          Order placed! Complete payment from your M-Pesa prompt — your order will confirm automatically.
+        <p className="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3.5 text-sm dark:bg-emerald-900/20" role="status">
+          Order placed! Complete payment from your M-Pesa prompt — your order confirms automatically once the backend verifies it.
         </p>
       )}
-      {orders.length === 0 && !error ? (
-        <p className="mt-4 text-sm text-muted-foreground">
-          No orders yet. <Link href="/products" className="text-primary hover:underline">Shop beauty products</Link>.
-        </p>
-      ) : (
-        <ul className="mt-6 max-w-2xl space-y-4">
-          {orders.map((o) => (
-            <li
-              key={o.id}
-              className={`rounded-lg border bg-card p-4 ${searchParams.highlight === o.id ? 'border-primary' : ''}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold">{formatPrice(o.totalCents, o.currency)}</p>
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">{o.status}</span>
-              </div>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                {o.items.map((i) => (
-                  <li key={i.id}>
-                    {i.qty} × {i.productName ?? 'Product'} — {formatPrice(i.unitCents, o.currency)}
-                  </li>
-                ))}
-              </ul>
-              {o.payment && <p className="mt-2 text-xs text-muted-foreground">Payment: {o.payment.status}</p>}
-            </li>
-          ))}
-        </ul>
+      {loading && <div className="mt-6"><ListSkeleton rows={3} /></div>}
+      {error && !loading && <div className="mt-6"><ErrorState description={error} onRetry={load} /></div>}
+      {!loading && !error && orders.length === 0 && (
+        <div className="mt-6">
+          <EmptyState
+            title="No orders yet"
+            description="Shop professional-recommended products — orders appear here with live payment status."
+            actionLabel="Shop beauty products"
+            actionHref="/products"
+          />
+        </div>
       )}
+      <ul className="mt-6 space-y-3">
+        {orders.map((o) => (
+          <li key={o.id} className={`card-rest p-4 ${searchParams.highlight === o.id ? 'border-primary' : ''}`}>
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-bold tabular-nums">{formatMinorUnits(o.totalCents, o.currency)}</p>
+              <StatusBadge status={o.status} />
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+              {o.items.map((i) => (
+                <li key={i.id}>{i.qty} × {i.productName ?? 'Product'} — {formatMinorUnits(i.unitCents, o.currency)}</li>
+              ))}
+            </ul>
+            <div className="mt-2.5 flex items-center justify-between gap-2 text-sm">
+              <span className="text-xs text-muted-foreground">
+                {o.payment ? <>Payment (verified): <strong>{o.payment.status}</strong></> : 'Payment pending'}
+              </span>
+              <Link href={`/orders/${o.id}`} className="font-medium text-primary hover:underline">View order</Link>
+            </div>
+          </li>
+        ))}
+      </ul>
     </main>
   );
+}
+
+export function OrderTabsPlaceholder() {
+  return <Tabs options={[{ key: 'all', label: 'All' }]} value="all" onChange={() => undefined} label="Orders" />;
 }
