@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { formatPrice } from '@/lib/api';
+import { AdminShell } from '@/components/layout/admin-shell';
+import { ErrorState } from '@/components/ui/error-state';
+import { ListSkeleton } from '@/components/ui/skeleton';
 
 interface Overview {
   revenue: { grossCents: string; payments: number; paymentFeesCents: string; commissionCents: string; refundedCents: string; netCents: string };
@@ -86,20 +89,18 @@ export default function AdminAnalyticsPage() {
   const pct = (n: number) => `${Math.round(n * 100)}%`;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <h1 className="text-2xl font-bold">Marketplace analytics</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Money metrics aggregate ledger tables; behavioural metrics aggregate tracked events. No vanity metrics.
-      </p>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded border px-3 py-1.5 text-sm" />
+    <AdminShell title="Analytics" description="Money metrics aggregate ledger tables; behavioural metrics aggregate tracked events. No vanity metrics.">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="sr-only" htmlFor="analytics-from">From date</label>
+        <input id="analytics-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-11 rounded-md border border-input bg-background px-3 text-sm" />
         <span className="text-sm text-muted-foreground">to</span>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded border px-3 py-1.5 text-sm" />
-        <button onClick={load} className="rounded-md bg-primary px-4 py-1.5 text-sm text-primary-foreground">Apply range</button>
+        <label className="sr-only" htmlFor="analytics-to">To date</label>
+        <input id="analytics-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-11 rounded-md border border-input bg-background px-3 text-sm" />
+        <button onClick={load} className="inline-flex min-h-[44px] items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Apply range</button>
       </div>
 
-      {loading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {loading && <div className="mt-4"><ListSkeleton rows={4} /></div>}
+      {error && <div className="mt-4"><ErrorState description={error} onRetry={load} /></div>}
 
       {overview && (
         <section className="mt-6">
