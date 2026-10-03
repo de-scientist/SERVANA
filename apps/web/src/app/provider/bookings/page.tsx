@@ -1,8 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { ProviderShell } from '@/components/layout/provider-shell';
+import { Tabs } from '@/components/ui/tabs';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
+import { ListSkeleton } from '@/components/ui/skeleton';
+import { formatDateTime, formatMinorUnits } from '@/lib/format';
 
 const VIEWS = [
   { key: 'pending', label: 'Pending' },
@@ -19,24 +25,25 @@ interface Booking {
   reference: string;
   status: string;
   startsAt: string;
-  priceCents: bigint;
+  priceCents: string;
   currency: string;
   service: { title: string };
   customer: { fullName: string };
 }
 
-const ACTIONS: Record<string, { label: string; path: string; kind: 'primary' | 'danger' | 'ghost' }[]> = {
+/** Status → allowed backend transition (PATCH, per provider-bookings controller). */
+const ACTIONS: Record<string, { label: string; path: string; kind: 'primary' | 'danger' }[]> = {
   PENDING: [
-    { label: 'Confirm', path: '/confirm', kind: 'primary' },
-    { label: 'Decline', path: '/decline', kind: 'danger' },
+    { label: 'Confirm', path: 'confirm', kind: 'primary' },
+    { label: 'Decline', path: 'decline', kind: 'danger' },
   ],
   CONFIRMED: [
-    { label: 'Start', path: '/start', kind: 'primary' },
-    { label: 'Cancel', path: '/cancel', kind: 'danger' },
+    { label: 'Start', path: 'start', kind: 'primary' },
+    { label: 'Cancel', path: 'cancel', kind: 'danger' },
   ],
   IN_PROGRESS: [
-    { label: 'Complete', path: '/complete', kind: 'primary' },
-    { label: 'Cancel', path: '/cancel', kind: 'danger' },
+    { label: 'Complete', path: 'complete', kind: 'primary' },
+    { label: 'Cancel', path: 'cancel', kind: 'danger' },
   ],
 };
 
@@ -45,80 +52,83 @@ export default function ProviderBookingsPage() {
   const [items, setItems] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [acting, setActing] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
     setError(null);
     apiClient
-      .get<{ data: Booking[] }>(`/bookings/provider?view=${view}`)
+      .get<{ data: Booking[] } | Booking[]>(`/bookings/provider?view=${view}`)
       .then((res) => {
         if (res.error) {
           setError(res.error.message);
           setItems([]);
         } else {
-          setItems((res.data as any) ?? []);
+          const raw = res.data as { data: Booking[] } | Booking[] | null;
+          setItems(Array.isArray(raw) ? raw : (raw?.data ?? []));
         }
+      })
+      .catch(() => {
+        setError('We couldn’t load bookings.');
+        setItems([]);
       })
       .finally(() => setLoading(false));
   }, [view]);
 
+  useEffect(() => {
+    load();
+  }, [load]);
+
   async function act(b: Booking, path: string) {
-    await apiClient.post(`/bookings/provider/${b.id}${path}`, {});
+    setActing(b.id);
+    const res = await apiClient.patch(`/bookings/provider/${b.id}/${path}`, {});
+    setActing(null);
+    if (res.error) {
+      setError(res.error.message);
+      return;
+    }
     setItems((prev) => prev.filter((x) => x.id !== b.id));
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="text-2xl font-bold">Bookings</h1>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {VIEWS.map((v) => (
-          <button
-            key={v.key}
-            onClick={() => setView(v.key)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-              view === v.key ? 'bg-primary text-primary-foreground' : 'border bg-background'
-            }`}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
-
-      {loading && <p className="mt-6 text-sm text-muted-foreground">Loading…</p>}
-      {error && <p className="mt-6 text-sm text-red-600">{error}</p>}
+    <ProviderShell title="Bookings" description="Accept, start and complete bookings. Status is always visible; only valid transitions are offered.">
+      <Tabs options={VIEWS} value={view} onChange={setView} label="Provider booking views" />
+      {loading && <div className="mt-5"><ListSkeleton rows={4} /></div>}
+      {error && !loading && <div className="mt-5"><ErrorState description={error} onRetry={load} /></div>}
       {!loading && !error && items.length === 0 && (
-        <p className="mt-6 text-sm text-muted-foreground">No bookings in this view.</p>
+        <div className="mt-5">
+          <EmptyState
+            title={`No ${view} bookings`}
+            description={view === 'pending' ? 'New requests will appear here for confirmation.' : 'Bookings in this state will appear here.'}
+          />
+        </div>
       )}
-
-      <ul className="mt-6 space-y-3">
+      <ul className="mt-5 space-y-3">
         {items.map((b) => (
-          <li key={b.id} className="rounded-lg border bg-card p-4 shadow-soft">
+          <li key={b.id} className="card-rest p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-medium">{b.service.title}</p>
-                <p className="text-sm text-muted-foreground">{b.customer.fullName}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {new Date(b.startsAt).toLocaleString('en-KE', { dateStyle: 'medium', timeStyle: 'short' })}
-                </p>
+                <p className="font-semibold">{b.service.title}</p>
+                <p className="text-sm text-muted-foreground">{b.customer.fullName} · <span className="font-mono text-xs">{b.reference}</span></p>
+                <p className="mt-1 text-sm text-muted-foreground"><time dateTime={b.startsAt}>{formatDateTime(b.startsAt)}</time></p>
               </div>
-              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{b.status}</span>
+              <StatusBadge status={b.status} />
             </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm font-semibold">{(Number(b.priceCents) / 100).toFixed(2)} {b.currency}</span>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <span className="font-bold tabular-nums">{formatMinorUnits(b.priceCents, b.currency)}</span>
               <div className="flex gap-2">
                 {(ACTIONS[b.status] ?? []).map((a) => (
                   <button
                     key={a.label}
                     onClick={() => act(b, a.path)}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                    disabled={acting === b.id}
+                    className={`inline-flex min-h-[40px] items-center rounded-md px-3.5 text-sm font-medium transition-micro disabled:opacity-50 ${
                       a.kind === 'primary'
                         ? 'bg-primary text-primary-foreground hover:opacity-90'
-                        : a.kind === 'danger'
-                          ? 'border border-red-300 text-red-600 hover:bg-red-50'
-                          : 'border hover:bg-muted'
+                        : 'border border-destructive/40 text-destructive hover:bg-destructive/5'
                     }`}
                   >
-                    {a.label}
+                    {acting === b.id ? 'Working…' : a.label}
                   </button>
                 ))}
               </div>
@@ -126,6 +136,6 @@ export default function ProviderBookingsPage() {
           </li>
         ))}
       </ul>
-    </main>
+    </ProviderShell>
   );
 }
