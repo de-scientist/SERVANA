@@ -66,8 +66,23 @@
 ## 9. Recommended next UX improvements
 
 1. Wrap remaining legacy pages (`admin/ai`, `admin/fraud`, `admin/payouts*`, `provider/performance`) in shells without touching logic.
-2. Add provider service editor (description/images/location-type/cancellation) as a proper form route once `PATCH /providers/me/services/:id` schema is confirmed client-side.
-3. Slot picker calendar view (month grid) reusing the same availability API.
+2. Add provider service editor (description/images/location-type/cancellation) as a proper form route once `PATCH /providers/me/services/:id` schema is confirmed client-side — reuse new `Field`/`Select`/`Textarea` primitives.
+3. Adopt new `Calendar` month grid in `AvailabilityPicker`/booking date step (same availability API, gridcell semantics already provided).
 4. Reschedule flow (currently cancel + rebook) per booking state machine.
 5. Favourites (saved providers/services) once a backend endpoint lands.
 6. E2E (Playwright/Cypress) for landing → search → provider → service → booking → checkout journeys.
+
+## 10. This session (2026-10-04)
+
+- `next build` was failing: `apps/web/src/app/orders/page.tsx` (a `'use client'` page)
+  exported an extra `OrderTabsPlaceholder` component, which App Router rejects.
+  Removed the dead export (and its now-unused `Tabs` import). `typecheck`, `lint`,
+  `build`, and `vitest` all pass.
+- Completed the §37 component set: added `Select`, `Textarea` + `Field`,
+  `Combobox`, `Modal`/`Drawer`/`Dialog` aliases over `Sheet`, dedicated
+  `Breadcrumb`, and `Calendar`/`DatePicker`/`TimePicker` — all dependency-free,
+  token-driven (no hex literals found in components), keyboard-accessible, with
+  `prefers-reduced-motion` respected globally.
+- Verified: skip link + `#main-content` + header/nav landmarks intact; no
+  hard-coded colours in components; backend contracts untouched (no API, state-machine,
+  or pricing changes).

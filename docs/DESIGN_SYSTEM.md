@@ -76,9 +76,14 @@ Easing: `cubic-bezier(0.22, 1, 0.36, 1)`. Micro-interactions only (button feedba
 ## 7. Components
 
 Base (`components/ui`): `Button` (primary/secondary/outline/ghost/destructive; sm/md/lg),
-`Input`, `Badge`, `Avatar`, `Rating` (backend aggregates only), `Price` (minor-units safe),
-`StatusBadge`, `Tabs` (tablist semantics), `Breadcrumb`, `SectionHeading`, `SearchBar`,
-`Sheet` + `ConfirmDialog` (accessible bottom-sheet on mobile), `DataTable` + `Pagination`,
+`Input`, `Textarea`, `Field` (label + hint/error wiring via `aria-describedby`),
+`Select` (native select, label/hint/error), `Combobox` (input + listbox, arrow-key support),
+`Badge`, `Avatar`, `Rating` (backend aggregates only), `Price` (minor-units safe),
+`StatusBadge`, `Tabs` (tablist semantics), `Breadcrumb` (dedicated `breadcrumb.tsx`,
+re-exported from `tabs.tsx`), `SectionHeading`, `SearchBar`,
+`Sheet` + `Modal`/`Drawer`/`Dialog` aliases (`modal.tsx`) + `ConfirmDialog` (accessible bottom-sheet on mobile),
+`DataTable` + `Pagination`,
+`Calendar` (month grid, gridcell semantics) + `DatePicker` + `TimePicker` (`calendar.tsx`),
 `EmptyState` (title + description + next action), `ErrorState` (human-readable + retry),
 `Skeleton` family (`ProviderCardSkeleton`, `CardGridSkeleton`, `ListSkeleton`), `Spinner`.
 
