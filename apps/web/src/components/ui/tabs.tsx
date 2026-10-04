@@ -1,7 +1,7 @@
 import * as React from 'react';
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
+
+export { Breadcrumb } from './breadcrumb';
 
 export function Tabs<T extends string>({
   options,
@@ -37,31 +37,6 @@ export function Tabs<T extends string>({
         </button>
       ))}
     </div>
-  );
-}
-
-export function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
-  return (
-    <nav aria-label="Breadcrumb" className="text-sm">
-      <ol className="flex flex-wrap items-center gap-1 text-muted-foreground">
-        {items.map((item, i) => (
-          <React.Fragment key={`${item.label}-${i}`}>
-            {i > 0 && <ChevronRight className="h-3.5 w-3.5" aria-hidden />}
-            <li>
-              {item.href ? (
-                <Link href={item.href} className="hover:text-foreground hover:underline">
-                  {item.label}
-                </Link>
-              ) : (
-                <span aria-current="page" className="font-medium text-foreground">
-                  {item.label}
-                </span>
-              )}
-            </li>
-          </React.Fragment>
-        ))}
-      </ol>
-    </nav>
   );
 }
 
