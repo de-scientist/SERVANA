@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { formatMinorUnits } from '@/lib/format';
-import { Breadcrumb, Tabs } from '@/components/ui/tabs';
+import { Breadcrumb } from '@/components/ui/tabs';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -94,6 +94,3 @@ export default function OrdersPage({ searchParams }: { searchParams: { highlight
   );
 }
 
-export function OrderTabsPlaceholder() {
-  return <Tabs options={[{ key: 'all', label: 'All' }]} value="all" onChange={() => undefined} label="Orders" />;
-}
