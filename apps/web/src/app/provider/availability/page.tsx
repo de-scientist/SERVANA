@@ -19,9 +19,11 @@ interface DaySchedule {
 /** Weekly schedule + breaks + days off. Recurring rules stay easy to understand. */
 export default function ProviderAvailabilityPage() {
   const { toast } = useToast();
-  const [schedule, setSchedule] = useState<Record<string, DaySchedule>>(() =>
-    Object.fromEntries(DAYS.map((d) => [d, { enabled: !['SUNDAY'].includes(d), open: '09:00', close: '17:00' }]),
-  );
+  const initialSchedule: Record<string, DaySchedule> = {};
+  for (const d of DAYS) {
+    initialSchedule[d] = { enabled: d !== 'SUNDAY', open: '09:00', close: '17:00' };
+  }
+  const [schedule, setSchedule] = useState<Record<string, DaySchedule>>(initialSchedule);
   const [breakStart, setBreakStart] = useState('13:00');
   const [breakEnd, setBreakEnd] = useState('14:00');
   const [loading, setLoading] = useState(true);

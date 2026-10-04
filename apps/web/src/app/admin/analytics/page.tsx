@@ -211,6 +211,6 @@ export default function AdminAnalyticsPage() {
           )}
         </section>
       )}
-    </main>
+    </AdminShell>
   );
 }
